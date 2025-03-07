@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Vendedor",
+    "value": "0"
+  },
+  {
+    "name": "Treco",
+    "value": "0"
+  },
+  {
+    "name": "Valor",
+    "value": "0"
+  },
+  {
+    "name": "Cidade",
+    "value": "0"
+  },
+  {
+    "name": "CPF",
+    "value": "0"
+  },
+  {
+    "name": "RG",
+    "value": "0"
+  },
+  {
+    "name": "Passaporte",
+    "value": "0"
+  },
+  {
+    "name": "Validade Passaporte",
+    "value": "0"
+  },
+  {
+    "name": "Observações",
+    "value": "0"
+  }
+]

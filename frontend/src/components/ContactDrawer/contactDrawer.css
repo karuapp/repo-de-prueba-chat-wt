@@ -1,0 +1,120 @@
+.CDcontactHeader {
+    display: flex;
+    padding: 8px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+.CDcontactHeader > * {
+    margin: 4px;
+  }
+  div.CDimgProfile > div > img {
+    border: 3px solid #dfe5e7a6;
+    border-radius: 50%;
+    width: 180px;
+}
+.CDnomeNumero {
+    text-align: center;
+    padding: 0px !important;
+    margin-bottom: 15px;
+    width: 100%;
+}
+.CDcontentContato {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0px 8px 8px;
+    height: 100%;
+}
+.CDcontactName {
+    font-size: 20px !important;
+    white-space: normal;
+    cursor: text;
+}
+.CDeditarContato, .CDeditarContatoAudio, .CDeditarContatoChatbot {
+    font-size: 16px !important;
+    width: 100%;
+    border: none !important;
+    color: #737373 !important;
+    text-transform: none !important;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px !important;
+}
+.CDeditarContatoAudio {
+    cursor: default !important;
+}
+.CDeditarContato span, .CDeditarContatoChatbot span {
+    justify-content: flex-start;
+}
+
+div#CDbuttonEdit, div#CDbuttonEditAudio, div#CDbuttonEditChatbot {
+    width: 100%;
+    display: flex;
+    justify-content: left;
+    margin-left: 5px;
+}
+.CDeditarContato .MuiButton-endIcon {
+    justify-content: end;
+}
+.CDeditarContatoChatbot .MuiButton-endIcon{
+    justify-content: end;
+}
+.CDblockContact  {
+    border: none !important;
+    margin-top: 10px !important;
+}
+.CDblockContact span {
+    color: #ea0038;
+    text-transform: none;
+    justify-content: flex-start;
+    margin-left: 1px;
+    font-size: 1rem;
+    padding: 3px 0;
+}
+.CDblockIcon {
+    margin-right: 12px !important;
+}
+
+.contactAvatar {
+    margin: 15px;
+    width: 160px;
+    height: 160px;
+    border-radius: 10px;
+  }
+.contactDetails {
+    margin-top: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+  }
+.CDcontactExtraInfo {
+    margin-top: 4px;
+    border: none !important;
+  }
+.CDheaderContact {
+    display: flex;
+    align-items: center;
+    min-height: 50px;
+    justify-content: flex-start;
+    box-shadow: 0 0px 5px 0px #6b6b6b3d;
+    z-index: 1;
+}
+.CDinfoExtra p {
+    font-size: 12px;
+    padding: 3px 0 10px 0;
+    color: #939393;
+}
+.CDinfoExtra span {
+    text-decoration: underline;
+    cursor: pointer;
+}
+.CDinputInfoName {
+    background-color: #ededed;
+    padding: 5px !important;
+    border-radius: 3px;
+    color: #141414 !important;
+    margin-right: 4px;
+    display: flex !important;
+    align-items: center;
+    font-size: 0.85rem !important;
+}

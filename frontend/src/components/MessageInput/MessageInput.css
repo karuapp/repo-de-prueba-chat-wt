@@ -1,0 +1,57 @@
+.emoji-mart-preview {
+    display: none;
+}
+.emoji-mart-anchor-selected {
+    color: #ffffff !important;
+}
+body.light .emoji-mart-anchor-selected {
+    color: #0000ff !important;
+}
+.emoji-mart-anchor-bar {
+    background-color: #ffffff !important;
+} 
+body.light .emoji-mart-anchor-bar {
+    background-color: #0000ff !important;
+}
+.emoji-mart-bar:last-child {
+    border-top-width: 0;
+}
+.emoji-mart {
+    scrollbar-color: #fff transparent;
+    scrollbar-width: thin;
+    border-radius: 15px;
+    background-color: #222222db;
+    color: #b5b5b5;
+    font-size: 0.9rem;
+  }
+body.light .emoji-mart {
+    scrollbar-color: #0000ff transparent;
+    scrollbar-width: thin;
+    border-radius: 15px;
+    background-color: #ffffffe3;
+    color: #8696a0;
+    font-size: 0.9rem;
+  }
+  .emoji-mart-scroll {
+    scrollbar-width: thin;
+  }
+  .emoji-mart::-webkit-scrollbar {
+    width: 2px !important; 
+  }
+  .emoji-mart::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .emoji-mart::-webkit-scrollbar-thumb {
+    background-color: rgba(105, 105, 105, 0.363);
+    border-radius: 4px;
+  }
+  .emoji-mart::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  
+          
+        
+  
+  
+  
+  

@@ -1,0 +1,81 @@
+.ntDiv center {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+.ntTitulo {
+    padding: 20px 0 10px;
+    font-size: 1.9rem;
+    font-weight: 500;
+    color: var(--ntTitulo);
+}
+.ntSubTitulo {
+    margin: 5px 0 30px;
+    color: var(--ntSubTitulo);
+}
+.ntButton {
+    border: none;
+    border-radius: 20px;
+    background-color: var(--btnPwaTicket);
+    padding: 13px 31px;
+    color: var(--brancoBtnPwa);
+    font-weight: bold;
+    margin-bottom: 5vw;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.ntSeguranca {
+    color: var(--corInfoCadeado);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+}
+.ntSeguranca svg {
+    margin-right: 3px;
+}
+.svgCadeadoTicket {
+    color: var(--corInfoCadeado);
+    margin-right: 5px;
+}
+.chatPapperTKC {
+    display: flex;
+	height: 100%;
+}
+.chatContainerTKC {
+    flex: 1;
+    padding: 2px;
+    height: calc(100% - 48px);
+    overflow-y: hidden;
+  }
+  .contactsWrapperTKC {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    overflow-y: hidden;
+    position: relative;
+  }
+  .messagesWrapperTKC {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+  .dragger {
+    width: 5px;
+    cursor: ew-resize;
+    padding: 4px 0 0;
+    border-top: 1px solid #ddd;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    background-color: #f4f7f9;
+    user-select: none;
+  }
+  
+  
+  
+  

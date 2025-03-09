@@ -27,7 +27,7 @@ import ModalImageCors from "../ModalImageCors";
 import MessageOptionsMenu from "../MessageOptionsMenu";
 //import whatsBackground from "../../assets/wa-background.png";
 import LocationPreview from "../LocationPreview";
-import VCardPreview from "../VCardPreview";
+import VCardPreview from '../VCardPreview';
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { socketConnection } from "../../services/socket";

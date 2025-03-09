@@ -1,382 +1,382 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
-import { toast } from "react-toastify";
+import qs from 'query-string'
+import countries from 'react-select-country-list';
+
+import * as Yup from "yup";
 import { useHistory } from "react-router-dom";
-// import { SocketContext } from "../../context/Socket/SocketContext";
-
-import { makeStyles } from "@material-ui/core/styles";
-import Paper from "@material-ui/core/Paper";
+import { Link as RouterLink } from "react-router-dom";
+import { toast } from "react-toastify";
+import { Formik, Form, Field } from "formik";
+import usePlans from "../../hooks/usePlans";
+import Avatar from "@material-ui/core/Avatar";
 import Button from "@material-ui/core/Button";
-import Table from "@material-ui/core/Table";
-import TableBody from "@material-ui/core/TableBody";
-import TableCell from "@material-ui/core/TableCell";
-import TableHead from "@material-ui/core/TableHead";
-import TableRow from "@material-ui/core/TableRow";
+import CssBaseline from "@material-ui/core/CssBaseline";
+import TextField from "@material-ui/core/TextField";
+import Link from "@material-ui/core/Link";
+import Grid from "@material-ui/core/Grid";
+import Box from "@material-ui/core/Box";
+import {
+    FormControl,
+    InputLabel,
+    MenuItem,
+    Select,
+} from "@material-ui/core";
+import LockOutlinedIcon from "@material-ui/icons/LockOutlined";
+import Typography from "@material-ui/core/Typography";
+import { makeStyles } from "@material-ui/core/styles";
+import Container from "@material-ui/core/Container";
 
-import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-
-import Title from "../../components/Title";
+import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
-import { i18n } from "../../translate/i18n";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
-import CompanyModal from "../../components/CompaniesModal";
-import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
-import { AuthContext } from "../../context/Auth/AuthContext";
-import { useDate } from "../../hooks/useDate";
-import usePlans from "../../hooks/usePlans";
 import moment from "moment";
-import { formatFolderSize } from "../../utils/formatFolderSize";
 
-const reducer = (state, action) => {
-    if (action.type === "LOAD_COMPANIES") {
-        const companies = action.payload;
-        const newCompanies = [];
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { AuthContext } from "../../context/Auth/AuthContext";
 
-        companies.forEach((company) => {
-            const companyIndex = state.findIndex((u) => u.id === company.id);
-            if (companyIndex !== -1) {
-                state[companyIndex] = company;
-            } else {
-                newCompanies.push(company);
-            }
-        });
+const Copyright = () => {
+    return (
+        <Typography variant="body2" color="powered" align="center">
+            {"Copyright "}
 
-        return [...state, ...newCompanies];
-    }
+            {new Date().getFullYear()}{" - "}
 
-    if (action.type === "UPDATE_COMPANIES") {
-        const company = action.payload;
-        const companyIndex = state.findIndex((u) => u.id === company.id);
+            {`${process.env.REACT_APP_NAME_SYSTEM}`}
+        </Typography>
+    );
+ };
 
-        if (companyIndex !== -1) {
-            state[companyIndex] = company;
-            return [...state];
-        } else {
-            return [company, ...state];
-        }
-    }
+const countryOptions = countries().getData();
 
-    if (action.type === "DELETE_COMPANIES") {
-        const companyId = action.payload;
 
-        const companyIndex = state.findIndex((u) => u.id === companyId);
-        if (companyIndex !== -1) {
-            state.splice(companyIndex, 1);
-        }
-        return [...state];
-    }
-
-    if (action.type === "RESET") {
-        return [];
-    }
-};
-
-const useStyles = makeStyles((theme) => ({
-    mainPaper: {
-        flex: 1,
-        padding: theme.spacing(1),
-        overflowY: "scroll",
-        ...theme.scrollbarStyles,
+const useStyles = makeStyles(theme => ({
+    paper: {
+        marginTop: theme.spacing(8),
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
     },
+    avatar: {
+        margin: theme.spacing(1),
+        backgroundColor: theme.palette.secondary.main,
+    },
+    form: {
+        width: "100%",
+        marginTop: theme.spacing(3),
+    },
+    submit: {
+        margin: theme.spacing(3, 0, 2),
+    },
+    powered: {
+        color: `${process.env.REACT_APP_POWERED_COLOR_SIGNUP}`,
+    }
 }));
 
-const Companies = () => {
+const UserSchema = Yup.object().shape({
+    name: Yup.string()
+        .min(2, "Too Short!")
+        .max(50, "Too Long!")
+        .required("Required"),
+    namecomplete: Yup.string()
+        .min(2, "Too Short!")
+        .max(50, "Too Long!")
+        .required("Required"),
+    phone: Yup.string()
+        .min(8, "Too Short!")
+        .max(50, "Too Long!")
+        .required("Required"),
+    pais: Yup.string()
+        .min(2, "Too Short!")
+        .max(50, "Too Long!")
+        .required("Required"),
+    password: Yup.string().min(5, "Too Short!").max(50, "Too Long!"),
+    email: Yup.string().email("Invalid email").required("Required"),
+});
+
+const SignUp = () => {
     const classes = useStyles();
     const history = useHistory();
+    let companyId = null
+    
+    const { user } = useContext(AuthContext);
 
-    const [loading, setLoading] = useState(false);
-    const [pageNumber, setPageNumber] = useState(1);
-    const [hasMore, setHasMore] = useState(false);
-    const [selectedCompany, setSelectedCompany] = useState(null);
-    const [deletingCompany, setDeletingCompany] = useState(null);
-    const [companyModalOpen, setCompanyModalOpen] = useState(false);
-    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-    const [searchParam, setSearchParam] = useState("");
-    const [companies, dispatch] = useReducer(reducer, []);
-    const { dateToClient, datetimeToClient } = useDate();
+    const [trial, settrial] = useState('3');
 
-    // const { getPlanCompany } = usePlans();
-  //   const socketManager = useContext(SocketContext);
-    const { user, socket } = useContext(AuthContext);
+    useEffect(() => {
+        fetchtrial();
+    }, []);
 
+    const fetchtrial = async () => {
+  
+ 
+    try {
+        const responsevvv = await api.get("/settings/trial");
+        const allowtrialX = responsevvv.data.value;
+        settrial(allowtrialX);
+        } catch (error) {
+            console.error('Error retrieving trial', error);
+        }
+    };
+
+    // trava para nao acessar pagina que não pode  
+    useEffect(() => {
+      async function fetchData() {
+        if (!user.super) {
+          toast.error("Sem permissão para acessar!");
+          setTimeout(() => {
+            history.push(`/`)
+          }, 500);
+        }
+      }
+      fetchData();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const params = qs.parse(window.location.search)
+    if (params.companyId !== undefined) {
+        companyId = params.companyId
+    }
+
+    //let refValue = null
+    //refValue = params.ref;
+
+    // Initialize the refValue variable with null or an initial value
+    const [refValue, setRefValue] = useState(params.ref);
+
+    // Update the refValue variable with the desired value
+    const handleRefChange = (event) => {
+        setRefValue(params.ref);
+    };
+
+    const initialState = { name: "", email: "", password: "", phone: "", pais: "BR", indicator: "", namecomplete: "", planId: "disabled", };
+
+    const [userB] = useState(initialState);
+    const dueDate = moment().add(trial, "day").format();
+    const handleSignUp = async values => {
+        Object.assign(values, { recurrence: "MENSAL" });
+        Object.assign(values, { dueDate: dueDate });
+        Object.assign(values, { status: "t" });
+        Object.assign(values, { campaignsEnabled: true });
+        try {
+            await api.post("/companies/internal", values);
+            toast.success(i18n.t("signup.toasts.success"));
+
+            window.location.reload(); 
+        } catch (err) {
+            console.log(err);
+            toastError(err);
+        }
+    };
+
+    const [plans, setPlans] = useState([]);
+    const { list: listPlans } = usePlans();
 
     useEffect(() => {
         async function fetchData() {
-            if (!user.super) {
-                toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
-                setTimeout(() => {
-                    history.push(`/`)
-                }, 1000);
-            }
+            const list = await listPlans();
+            setPlans(list);
         }
         fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useEffect(() => {
-        dispatch({ type: "RESET" });
-        setPageNumber(1);
-    }, [searchParam]);
+    const logo = `${process.env.REACT_APP_BACKEND_URL}/public/logotipos/signup.png`;
+    const randomValue = Math.random(); // Generate a random number
+  
+    const logoWithRandom = `${logo}?r=${randomValue}`;
 
-    useEffect(() => {
-        setLoading(true);
-        const delayDebounceFn = setTimeout(() => {
-            const fetchCompanies = async () => {
-                try {
-                    const { data } = await api.get("/companiesPlan/", {
-                        params: { searchParam, pageNumber },
-                    });
-                    dispatch({ type: "LOAD_COMPANIES", payload: data.companies });
-                    setHasMore(data.hasMore);
-                    setLoading(false);
-                } catch (err) {
-                    toastError(err);
-                }
-            };
-            fetchCompanies();
-        }, 500);
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchParam, pageNumber]);
-
-//     useEffect(() => {
-//         const companyId = user.companyId;
-//   //    const socket = socketManager.GetSocket();
-//         // const socket = socketConnection();
-
-//         return () => {
-//             socket.disconnect();
-//         };
-//     }, []);
-
-    const handleOpenCompanyModal = () => {
-        setSelectedCompany(null);
-        setCompanyModalOpen(true);
-    };
-
-    const handleCloseCompanyModal = () => {
-        setSelectedCompany(null);
-        setCompanyModalOpen(false);
-    };
-
-    const handleSearch = (event) => {
-        setSearchParam(event.target.value.toLowerCase());
-    };
-
-    const handleEditCompany = (company) => {
-        setSelectedCompany(company);
-        setCompanyModalOpen(true);
-    };
-
-    const handleDeleteCompany = async (companyId) => {
-        try {
-            await api.delete(`/companies/${companyId}`);
-            toast.success(i18n.t("compaies.toasts.deleted"));
-        } catch (err) {
-            toastError(err);
-        }
-        setDeletingCompany(null);
-        setSearchParam("");
-        setPageNumber(1);
-    };
-
-    const loadMore = () => {
-        setPageNumber((prevState) => prevState + 1);
-    };
-
-    const handleScroll = (e) => {
-        if (!hasMore || loading) return;
-        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        if (scrollHeight - (scrollTop + 100) < clientHeight) {
-            loadMore();
-        }
-    };
-
-    const renderStatus = (row) => {
-        return row.status === false ? "Não" : "Sim";
-    };
-
-    const renderPlanValue = (row) => {
-        return row.planId !== null ? row.plan.amount ? row.plan.amount.toLocaleString('pt-br', { minimumFractionDigits: 2 }) : '00.00' : "-";
-    };
-
-    const renderWhatsapp = (row) => {
-        return row.useWhatsapp === false ? "Não" : "Sim";
-    };
-
-    const renderFacebook = (row) => {
-        return row.useFacebook === false ? "Não" : "Sim";
-    };
-
-    const renderInstagram = (row) => {
-        return row.useInstagram === false ? "Não" : "Sim";
-    };
-
-    const renderCampaigns = (row) => {
-        return row.useCampaigns === false ? "Não" : "Sim";
-    };
-
-    const renderSchedules = (row) => {
-        return row.useSchedules === false ? "Não" : "Sim";
-    };
-
-    const renderInternalChat = (row) => {
-        return row.useInternalChat === false ? "Não" : "Sim";
-    };
-
-    const renderExternalApi = (row) => {
-        return row.useExternalApi === false ? "Não" : "Sim";
-    };
-
-    const rowStyle = (record) => {
-        if (moment(record.dueDate).isValid()) {
-            const now = moment();
-            const dueDate = moment(record.dueDate);
-            const diff = dueDate.diff(now, "days");
-            if (diff >= 1 && diff <= 5) {
-                return { backgroundColor: "#fffead" };
-            }
-            if (diff <= 0) {
-                return { backgroundColor: "#fa8c8c" };
-            }
-            // else {
-            //   return { backgroundColor: "#affa8c" };
-            // }
-        }
-        return {};
-    };
 
     return (
-        <MainContainer>
-            <ConfirmationModal
-                title={
-                    deletingCompany &&
-                    `${i18n.t("compaies.confirmationModal.deleteTitle")} ${deletingCompany.name}?`
-                }
-                open={confirmModalOpen}
-                onClose={setConfirmModalOpen}
-                onConfirm={() => handleDeleteCompany(deletingCompany.id)}
-            >
-                {i18n.t("compaies.confirmationModal.deleteMessage")}
-            </ConfirmationModal>
-            <CompanyModal
-                open={companyModalOpen}
-                onClose={handleCloseCompanyModal}
-                aria-labelledby="form-dialog-title"
-                companyId={selectedCompany && selectedCompany.id}
-            />
-            <MainHeader>
-                <Title>{i18n.t("compaies.title")} ({companies.length})</Title>
-                {/* <MainHeaderButtonsWrapper>
-                    <TextField
-                        placeholder={i18n.t("contacts.searchPlaceholder")}
-                        type="search"
-                        value={searchParam}
-                        onChange={handleSearch}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon style={{ color: "gray" }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleOpenCompanyModal}
-                    >
-                        {i18n.t("compaies.buttons.add")}
-                    </Button>
-                </MainHeaderButtonsWrapper> */}
-            </MainHeader>
-            <Paper
-                className={classes.mainPaper}
-                variant="outlined"
-                onScroll={handleScroll}
-            >
-                <Table size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell align="center">{i18n.t("compaies.table.ID")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.status")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.name")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.email")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.namePlan")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.value")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.createdAt")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.dueDate")}</TableCell>
-                            <TableCell align="center">{i18n.t("compaies.table.lastLogin")}</TableCell>
-                            <TableCell align="center">Tamanho da pasta</TableCell>
-                            <TableCell align="center">Total de arquivos</TableCell>
-                            <TableCell align="center">Ultimo update</TableCell>
-                            {/* <TableCell align="center">{i18n.t("compaies.table.numberAttendants")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.numberConections")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.numberQueues")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.useWhatsapp")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.useFacebook")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.useInstagram")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.useCampaigns")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.useExternalApi")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.useInternalChat")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.useSchedules")}</TableCell> */}
-                            {/* <TableCell align="center">{i18n.t("compaies.table.actions")}</TableCell> */}
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        <>
-                            {companies.map((company) => (
-                                <TableRow style={rowStyle(company)} key={company.id}>
-                                    <TableCell align="center">{company.id}</TableCell>
-                                    <TableCell align="center">{renderStatus(company.status)}</TableCell>
-                                    <TableCell align="center">{company.name}</TableCell>
-                                    <TableCell align="center">{company.email}</TableCell>
-                                    <TableCell align="center">{company?.plan?.name}</TableCell>
-                                    <TableCell align="center">R$ {renderPlanValue(company)}</TableCell>
-                                    <TableCell align="center">{dateToClient(company.createdAt)}</TableCell>
-                                    <TableCell align="center">{dateToClient(company.dueDate)}<br /><span>{company.recurrence}</span></TableCell>
-                                    <TableCell align="center">{datetimeToClient(company.lastLogin)}</TableCell>
-                                    <TableCell align="center">{formatFolderSize(company.metrics.folderSize)}</TableCell>
-                                    <TableCell align="center">{company.metrics.numberOfFiles}</TableCell>
-                                    <TableCell align="center">{company.metrics.lastUpdate}</TableCell>
-                                    {/* <TableCell align="center">{company.plan.users}</TableCell> */}
-                                    {/* <TableCell align="center">{company.plan.connections}</TableCell> */}
-                                    {/* <TableCell align="center">{company.plan.queues}</TableCell> */}
-                                    {/* <TableCell align="center">{renderWhatsapp(company.plan.useWhatsapp)}</TableCell> */}
-                                    {/* <TableCell align="center">{renderFacebook(company.plan.useFacebook)}</TableCell> */}
-                                    {/* <TableCell align="center">{renderInstagram(company.plan.useInstagram)}</TableCell> */}
-                                    {/* <TableCell align="center">{renderCampaigns(company.plan.useCampaigns)}</TableCell> */}
-                                    {/* <TableCell align="center">{renderExternalApi(company.plan.useExternalApi)}</TableCell> */}
-                                    {/* <TableCell align="center">{renderInternalChat(company.plan.useInternalChat)}</TableCell> */}
-                                    {/* <TableCell align="center">{renderSchedules(company.plan.useSchedules)}</TableCell> */}
-                                    {/* <TableCell align="center">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => handleEditCompany(company)}
-                                        >
-                                            <EditIcon />
-                                        </IconButton>
+        <Container component="main" maxWidth="xs">
+            <CssBaseline />
+            <div className={classes.paper}>
+                <div>
+                    <center><img style={{ margin: "0 auto", width: "70%" }} src={logo} alt={`${process.env.REACT_APP_NAME_SYSTEM}`} /></center>
+                </div>
+                {/* <form className={classes.form} noValidate onSubmit={handleSignUp}> */}
+                <Formik
+                    initialValues={userB}
+                    enableReinitialize={true}
+                    validationSchema={UserSchema}
+                    onSubmit={(values, actions) => {
+                    
+                        //values.indicator = refValue;
+                    
+                        setTimeout(() => {
+                            handleSignUp(values);
+                            actions.setSubmitting(false);
+                        }, 400);
+                    }}
+                >
+                    {({ touched, errors, isSubmitting }) => (
+                        <Form className={classes.form}>
+                    
+                    <Grid container spacing={2}>
+                    
+                            <Grid item xs={12}>
+                                    <Field
+                                        as={TextField}
+                                        autoComplete="namecomplete"
+                                        name="namecomplete"
+                                        error={touched.namecomplete && Boolean(errors.namecomplete)}
+                                        helperText={touched.namecomplete && errors.namecomplete}
+                                        variant="outlined"
+                                        fullWidth
+                                        id="namecomplete"
+                                        label="Nome Completo"
+                                        required
+                                    />
+                            </Grid>
 
-                                        <IconButton
-                                            size="small"
-                                            onClick={(e) => {
-                                                setConfirmModalOpen(true);
-                                                setDeletingCompany(company);
-                                            }}
-                                        >
-                                            <DeleteOutlineIcon />
-                                        </IconButton>
-                                    </TableCell> */}
-                                </TableRow>
-                            ))}
-                            {loading && <TableRowSkeleton columns={4} />}
-                        </>
-                    </TableBody>
-                </Table>
-            </Paper>
-        </MainContainer>
+                            
+                                <Grid item xs={12}>
+                                    <Field
+                                        as={TextField}
+                                        autoComplete="name"
+                                        name="name"
+                                        error={touched.name && Boolean(errors.name)}
+                                        helperText={touched.name && errors.name}
+                                        variant="outlined"
+                                        fullWidth
+                                        id="name"
+                                        label="Empresa"
+                                        required
+                                    />
+                                </Grid>
+
+                                
+
+                                <Grid item xs={12}>
+                                    <Field
+                                        as={TextField}
+                                        variant="outlined"
+                                        fullWidth
+                                        id="email"
+                                        label={i18n.t("signup.form.email")}
+                                        name="email"
+                                        error={touched.email && Boolean(errors.email)}
+                                        helperText={touched.email && errors.email}
+                                        autoComplete="email"
+                                        required
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Field
+                                        as={TextField}
+                                        variant="outlined"
+                                        fullWidth
+                                        name="password"
+                                        error={touched.password && Boolean(errors.password)}
+                                        helperText={touched.password && errors.password}
+                                        label={i18n.t("signup.form.password")}
+                                        type="password"
+                                        id="password"
+                                        autoComplete="current-password"
+                                        required
+                                    />
+                                </Grid>
+
+
+
+                                <Grid item xs={12}>
+                                    <Field
+                                        as={TextField}
+                                        autoComplete="phone"
+                                        name="phone"
+                                        error={touched.phone && Boolean(errors.phone)}
+                                        helperText={touched.phone && errors.phone}
+                                        variant="outlined"
+                                        fullWidth
+                                        type="number"
+                                        id="phone"
+                                        label="Celular"
+                                        required
+                                    />
+                                </Grid>
+
+
+
+                                
+                                <Grid item xs={12}>
+                                    <InputLabel htmlFor="pais">País</InputLabel>
+                                    <Field
+                                        as={Select}
+                                        variant="outlined"
+                                        fullWidth
+                                        id="pais"
+                                        label="País"
+                                        name="pais"
+                                        required
+                                    >
+                                        <MenuItem value="disabled" disabled>
+                                            <em>Qual seu País?</em>
+                                        </MenuItem>
+                                    {countryOptions.map((country, key) => (
+                                            <MenuItem key={key} value={country.value}>
+                                            {country.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Field>
+                                </Grid>
+
+
+                                <Grid item xs={12}>
+                                    <InputLabel htmlFor="plan-selection">Plano</InputLabel>
+                                    <Field
+                                        as={Select}
+                                        variant="outlined"
+                                        fullWidth
+                                        id="plan-selection"
+                                        label="Plano"
+                                        name="planId"
+                                        required
+                                    >
+                                        <MenuItem value="disabled" disabled>
+                                            <em>Selecione seu plano de assinatura</em>
+                                        </MenuItem>
+                                        {plans.map((plan, key) => (
+                                            <MenuItem key={key} value={plan.id}>
+                                                {plan.name} - {plan.connections} WhatsApps - {plan.users} Usuários - R$ {plan.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </MenuItem>
+                                        ))}
+                                    </Field>
+                                </Grid>
+
+                                <Grid item xs={12}>
+                                    <Field
+                                        as={TextField}
+                                        autoComplete="off"
+                                        name="indicator"
+                                        error={touched.indicator && Boolean(errors.indicator)}
+                                        helperText={touched.indicator && errors.indicator}
+                                        variant="outlined"
+                                        fullWidth
+                                        id="indicator"
+                                        label="Código de Indicação"
+                                    />
+                                </Grid>
+
+
+
+
+                            </Grid>
+                            <Button
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                color="primary"
+                                className={classes.submit}
+                            >
+                                {i18n.t("signup.buttons.submit")}
+                            </Button>
+
+                        </Form>
+                    )}
+                </Formik>
+            </div>
+        </Container>
     );
 };
 
-export default Companies;
+export default SignUp;

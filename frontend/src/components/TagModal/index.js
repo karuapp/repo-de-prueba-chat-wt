@@ -15,14 +15,20 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { Colorize } from "@material-ui/icons";
 import { ColorBox } from 'material-ui-color';
+import { FormControlLabel, Switch } from '@material-ui/core';
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import InputLabel from "@material-ui/core/InputLabel";
+import Checkbox from '@material-ui/core/Checkbox';
+
 
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { FormControl, IconButton, InputAdornment, InputLabel, MenuItem, Select } from "@material-ui/core";
-import { Grid } from "@material-ui/core";
+import { IconButton, InputAdornment, FormControl } from "@material-ui/core";
+
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -56,6 +62,11 @@ const useStyles = makeStyles(theme => ({
 		width: 20,
 		height: 20,
 	},
+    multFieldLine: {
+    	display: 'flex',
+    	flexDirection: 'row',
+    	alignItems: 'center',
+  	},
 }));
 
 const TagSchema = Yup.object().shape({
@@ -64,45 +75,21 @@ const TagSchema = Yup.object().shape({
 		.required("Obrigatório")
 });
 
-const TagModal = ({ open, onClose, tagId, kanban }) => {
+const TagModal = ({ open, onClose, tagId, reload }) => {
 	const classes = useStyles();
 	const { user } = useContext(AuthContext);
 	const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
-	const [lanes, setLanes] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [selectedLane, setSelectedLane] = useState([]);
-	const [selectedRollbackLane, setSelectedRollbackLane] = useState([]);
+    //console.log(user);
 
 
 	const initialState = {
 		name: "",
-		color: getRandomHexColor(),
-		kanban: kanban,
-		timeLane: 0,
-		nextLaneId: 0,
-		greetingMessageLane: "",
-		rollbackLaneId: 0,
+		color: "",
+        kanban: 0, 
+		order: 0
 	};
 
 	const [tag, setTag] = useState(initialState);
-
-	useEffect(() => {
-		setLoading(true);
-		const delayDebounceFn = setTimeout(() => {
-			const fetchTags = async () => {
-				try {
-					const { data } = await api.get("/tags/", {
-						params: { kanban: 1, tagId },
-					});
-					setLanes(data.tags);
-				} catch (err) {
-					toastError(err);
-				}
-			};
-			fetchTags();
-		}, 500);
-		return () => clearTimeout(delayDebounceFn);
-	}, []);
 
 	useEffect(() => {
 		try {
@@ -110,15 +97,10 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 				if (!tagId) return;
 
 				const { data } = await api.get(`/tags/${tagId}`);
+                //console.log(data);
 				setTag(prevState => {
 					return { ...prevState, ...data };
 				});
-				if (data.nextLaneId) {
-					setSelectedLane(data.nextLaneId);
-				}
-				if (data.rollbackLaneId) {
-					setSelectedRollbackLane(data.rollbackLaneId);
-				}
 			})()
 		} catch (err) {
 			toastError(err);
@@ -132,47 +114,43 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 	};
 
 	const handleSaveTag = async values => {
-		const tagData = { ...values, userId: user?.id, kanban: kanban, nextLaneId: selectedLane || null, rollbackLaneId: selectedRollbackLane || null };
-
+		const tagData = { ...values, userId: user.id };
 		try {
 			if (tagId) {
 				await api.put(`/tags/${tagId}`, tagData);
 			} else {
 				await api.post("/tags", tagData);
 			}
-			toast.success(kanban === 0 ? `${i18n.t("tagModal.success")}` : `${i18n.t("tagModal.successKanban")}`);
-
+			toast.success(i18n.t("tagModal.success"));
+			if (typeof reload == 'function') {
+				reload();
+			}
 		} catch (err) {
 			toastError(err);
 		}
 		handleClose();
 	};
 
-	function getRandomHexColor() {
-		// Gerar valores aleatórios para os componentes de cor
-		const red = Math.floor(Math.random() * 256); // Valor entre 0 e 255
-		const green = Math.floor(Math.random() * 256); // Valor entre 0 e 255
-		const blue = Math.floor(Math.random() * 256); // Valor entre 0 e 255
 
-		// Converter os componentes de cor em uma cor hexadecimal
-		const hexColor = `#${red.toString(16).padStart(2, '0')}${green.toString(16).padStart(2, '0')}${blue.toString(16).padStart(2, '0')}`;
-
-		return hexColor;
-	}
-
+const handleKanbanChange = (e) => {
+    const kanbanValue = e.target.checked ? 1 : 0;
+    setTag((prev) => ({
+      ...prev,
+      kanban: kanbanValue,
+    }));
+  };
 	return (
+    	
 		<div className={classes.root}>
 			<Dialog
 				open={open}
 				onClose={handleClose}
-				maxWidth="md"
+				maxWidth="xs"
 				fullWidth
 				scroll="paper"
 			>
 				<DialogTitle id="form-dialog-title">
-					{(tagId ? (kanban === 0 ? `${i18n.t("tagModal.title.edit")}` : `${i18n.t("tagModal.title.editKanban")}`) :
-						(kanban === 0 ? `${i18n.t("tagModal.title.add")}` : `${i18n.t("tagModal.title.addKanban")}`))
-					}
+					{ (tagId ? `${i18n.t("tagModal.title.edit")}` : `${i18n.t("tagModal.title.add")}`) }
 				</DialogTitle>
 				<Formik
 					initialValues={tag}
@@ -188,167 +166,103 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 					{({ touched, errors, isSubmitting, values }) => (
 						<Form>
 							<DialogContent dividers>
-								<Grid container spacing={1}>
-									<Grid item xs={12} md={12} xl={12}>
-										<Field
-											as={TextField}
-											label={i18n.t("tagModal.form.name")}
-											name="name"
-											error={touched.name && Boolean(errors.name)}
-											helperText={touched.name && errors.name}
-											variant="outlined"
-											margin="dense"
-											onChange={(e) => setTag(prev => ({ ...prev, name: e.target.value }))}
-											fullWidth
+								<div className={classes.multFieldLine}>
+									<Field
+										as={TextField}
+										label={i18n.t("tagModal.form.name")}
+										name="name"
+										error={touched.name && Boolean(errors.name)}
+										helperText={touched.name && errors.name}
+										variant="outlined"
+										margin="dense"
+										onChange={(e) => setTag(prev => ({ ...prev, name: e.target.value }))}
+										fullWidth
+									/>
+								</div>
+								<br />
+								<div className={classes.multFieldLine}>
+									<Field
+										as={TextField}
+										fullWidth
+										label={i18n.t("tagModal.form.color")}
+										name="color"
+										id="color"
+										error={touched.color && Boolean(errors.color)}
+										helperText={touched.color && errors.color}
+										InputProps={{
+											startAdornment: (
+												<InputAdornment position="start">
+													<div
+														style={{ backgroundColor: values.color }}
+														className={classes.colorAdorment}
+													></div>
+												</InputAdornment>
+											),
+											endAdornment: (
+												<IconButton
+													size="small"
+													color="default"
+													onClick={() => setColorPickerModalOpen(!colorPickerModalOpen)}
+												>
+													<Colorize />
+												</IconButton>
+											),
+										}}
+										variant="outlined"
+										margin="dense"
+									/>
+								</div>
+                                {(user.profile === "admin" || user.profile === "supervisor") && (
+                                <>
 
-										/>
-									</Grid>
-									<Grid item xs={12} md={12} xl={12}>
+								{tag?.kanban === 1 && (
+									<div>
 										<Field
-											as={TextField}
-											fullWidth
-											label={i18n.t("tagModal.form.color")}
-											name="color"
-											autoFocus
-											id="color"
-											error={touched.color && Boolean(errors.color)}
-											helperText={touched.color && errors.color}
-											InputProps={{
-												startAdornment: (
-													<InputAdornment position="start">
-														<div
-															style={{ backgroundColor: values.color }}
-															className={classes.colorAdorment}
-														></div>
-													</InputAdornment>
-												),
-												endAdornment: (
-													<IconButton
-														size="small"
-														color="default"
-														onClick={() => setColorPickerModalOpen(!colorPickerModalOpen)}
-													>
-														<Colorize />
-													</IconButton>
-												),
+										as={TextField}
+										label={i18n.t("Ordenarar Kanban")}
+										name="order"
+										error={touched.order && Boolean(errors.order)}
+										helperText={touched.order && errors.order}
+										variant="outlined"
+										margin="dense"
+										onChange={(e) => setTag(prev => ({ ...prev, order: e.target.value }))}
+										fullWidth
+										/>
+									</div>
+								)}
+
+
+								<div className={classes.multFieldLine}>
+        							<FormControlLabel
+          								control={
+            								<Checkbox
+             									checked={tag.kanban === 1}
+             									onChange={handleKanbanChange}
+              									name="kanban"
+              									color="primary"
+            								/>
+          								}
+          								label={i18n.t('tagModal.form.kanban')}
+          								labelPlacement="start"
+        							/>
+								</div>
+      							<br />
+                                </>
+								)}
+                                
+								{ colorPickerModalOpen && (
+									<div>
+										<ColorBox
+											disableAlpha={true}
+											hslGradient={false}
+											style={{margin: '20px auto 0'}}
+											value={tag.color}
+											onChange={val => {
+												setTag(prev => ({ ...prev, color: `#${val.hex}` }));
 											}}
-											variant="outlined"
-											margin="dense"
 										/>
-
-										{colorPickerModalOpen && (
-											<div>
-												<ColorBox
-													disableAlpha={true}
-													hslGradient={false}
-													style={{ margin: '20px auto 0' }}
-													value={tag.color}
-													onChange={val => {
-														setTag(prev => ({ ...prev, color: `#${val.hex}` }));
-													}}
-												/>
-											</div>
-										)}
-									</Grid>
-
-									{kanban === 1 && (
-										<>
-											<Grid item xs={12} md={6} xl={6}>
-												<Field
-													as={TextField}
-													label={i18n.t("tagModal.form.timeLane")}
-													name="timeLane"
-													error={touched.timeLane && Boolean(errors.timeLane)}
-													helperText={touched.timeLane && errors.timeLane}
-													variant="outlined"
-													margin="dense"
-													onChange={(e) => setTag(prev => ({ ...prev, timeLane: e.target.value }))}
-													fullWidth
-												/>
-											</Grid>
-											<Grid item xs={12} md={6} xl={6}>
-												<FormControl
-													variant="outlined"
-													margin="dense"
-													fullWidth
-													className={classes.formControl}
-												>
-													<InputLabel id="whatsapp-selection-label">
-														{i18n.t("tagModal.form.nextLaneId")}
-													</InputLabel>
-													<Field
-														as={Select}
-														label={i18n.t("tagModal.form.nextLaneId")}
-														placeholder={i18n.t("tagModal.form.nextLaneId")}
-														labelId="whatsapp-selection-label"
-														id="nextLaneId"
-														name="nextLaneId"
-														style={{ left: "-7px" }}
-														error={touched.nextLaneId && Boolean(errors.nextLaneId)}
-														value={selectedLane}
-														onChange={(e) => setSelectedLane(e.target.value || null)}
-													>
-														<MenuItem value={null}>&nbsp;</MenuItem>
-														{lanes &&
-															lanes.map((lane) => (
-																<MenuItem key={lane.id} value={lane.id}>
-																	{lane.name}
-																</MenuItem>
-															))}
-													</Field>
-												</FormControl>
-											</Grid>
-											<Grid item xs={12} md={12} xl={12}>
-												<Field
-													as={TextField}
-													label={i18n.t("tagModal.form.greetingMessageLane")}
-													name="greetingMessageLane"
-													rows={5}
-													multiline
-													error={touched.greetingMessageLane && Boolean(errors.greetingMessageLane)}
-													helperText={touched.greetingMessageLane && errors.greetingMessageLane}
-													variant="outlined"
-													margin="dense"
-													onChange={(e) => setTag(prev => ({ ...prev, greetingMessageLane: e.target.value }))}
-													fullWidth
-												/>
-											</Grid>
-											<Grid item xs={12} md={12} xl={12}>
-												<FormControl
-													variant="outlined"
-													margin="dense"
-													fullWidth
-													className={classes.formControl}
-												>
-													<InputLabel id="whatsapp-selection-label">
-														{i18n.t("tagModal.form.rollbackLaneId")}
-													</InputLabel>
-													<Field
-														as={Select}
-														label={i18n.t("tagModal.form.rollbackLaneId")}
-														placeholder={i18n.t("tagModal.form.rollbackLaneId")}
-														labelId="whatsapp-selection-label"
-														id="rollbackLaneId"
-														name="rollbackLaneId"
-														style={{ left: "-7px" }}
-														error={touched.rollbackLaneId && Boolean(errors.rollbackLaneId)}
-														value={selectedRollbackLane}
-														onChange={(e) => setSelectedRollbackLane(e.target.value)}
-													>
-														<MenuItem value={null}>&nbsp;</MenuItem>
-														{lanes &&
-															lanes.map((lane) => (
-																<MenuItem key={lane.id} value={lane.id}>
-																	{lane.name}
-																</MenuItem>
-															))}
-													</Field>
-												</FormControl>
-											</Grid>
-										</>
-									)}
-								</Grid>
-
+									</div>
+								)}
 							</DialogContent>
 							<DialogActions>
 								<Button
@@ -382,6 +296,7 @@ const TagModal = ({ open, onClose, tagId, kanban }) => {
 				</Formik>
 			</Dialog>
 		</div>
+        
 	);
 };
 

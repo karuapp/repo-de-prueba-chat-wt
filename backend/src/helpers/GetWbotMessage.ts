@@ -1,5 +1,7 @@
-import { proto, WASocket } from "@whiskeysockets/baileys";
+import { proto } from "@whiskeysockets/baileys";
+import WALegacySocket from "@whiskeysockets/baileys"
 import Ticket from "../models/Ticket";
+import GetTicketWbot from "./GetTicketWbot";
 import AppError from "../errors/AppError";
 import GetMessageService from "../services/MessageServices/GetMessagesService";
 import Message from "../models/Message";
@@ -8,14 +10,21 @@ export const GetWbotMessage = async (
   ticket: Ticket,
   messageId: string
 ): Promise<proto.WebMessageInfo | Message> => {
+  const getSock = await GetTicketWbot(ticket);
+
+  let limit = 20;
+
   const fetchWbotMessagesGradually = async (): Promise<
     proto.WebMessageInfo | Message | null | undefined
   > => {
-    const msgFound = await GetMessageService({
-      id: messageId
-    });
+      const msgFound = await GetMessageService({
+        id: messageId
+      });
 
-    return msgFound;
+      return msgFound;
+    
+
+    return null;
   };
 
   try {

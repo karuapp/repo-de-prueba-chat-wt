@@ -4,24 +4,10 @@ import Plan from "../../models/Plan";
 
 interface PlanData {
   name: string;
-  users?: number;
-  connections?: number;
-  queues?: number;
-  amount?: string;
-  useWhatsapp?: boolean;
-  useFacebook?: boolean;
-  useInstagram?: boolean;
-  useCampaigns?: boolean;
-  useSchedules?: boolean;
-  useInternalChat?: boolean;
-  useExternalApi?: boolean;
-  useKanban?: boolean;
-  trial?: boolean;
-  trialDays?: number;
-  recurrence?: string;
-  useOpenAi?: boolean;
-  useIntegrations?: boolean;
-  isPublic?: boolean;
+  users: number;
+  connections: number;
+  queues: number;
+  value: number;
 }
 
 const CreatePlanService = async (planData: PlanData): Promise<Plan> => {

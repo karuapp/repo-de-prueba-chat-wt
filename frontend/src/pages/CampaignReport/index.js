@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
+
 import { Grid, LinearProgress, Typography } from "@material-ui/core";
 import api from "../../services/api";
 import { has, get, isNull } from "lodash";
@@ -21,16 +22,14 @@ import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import ListAltIcon from "@material-ui/icons/ListAlt";
 import { useDate } from "../../hooks/useDate";
 import usePlans from "../../hooks/usePlans";
-import { AuthContext } from "../../context/Auth/AuthContext";
 
-// import { SocketContext } from "../../context/Socket/SocketContext";
-import { i18n } from "../../translate/i18n";
+import { SocketContext } from "../../context/Socket/SocketContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    // padding: theme.spacing(2),
-    padding: theme.padding,
+    padding: theme.spacing(2),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
@@ -38,17 +37,15 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "right",
   },
   tabPanelsContainer: {
-    // padding: theme.spacing(2),
-    padding: theme.padding,
+    padding: theme.spacing(2),
   },
 }));
 
 const CampaignReport = () => {
   const classes = useStyles();
-  const history = useHistory();
 
   const { campaignId } = useParams();
-
+  const history = useHistory();
   const [campaign, setCampaign] = useState({});
   const [validContacts, setValidContacts] = useState(0);
   const [delivered, setDelivered] = useState(0);
@@ -56,23 +53,22 @@ const CampaignReport = () => {
   const [confirmed, setConfirmed] = useState(0);
   const [percent, setPercent] = useState(0);
   const [loading, setLoading] = useState(false);
-  const mounted = useRef(true);
-  //   const socketManager = useContext(SocketContext);
-  const { user, socket } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
 
+  const mounted = useRef(true);
 
   const { datetimeToClient } = useDate();
   const { getPlanCompany } = usePlans();
 
   useEffect(() => {
     async function fetchData() {
-      const companyId = user.companyId;
+      const companyId = localStorage.getItem("companyId");
       const planConfigs = await getPlanCompany(undefined, companyId);
       if (!planConfigs.plan.useCampaigns) {
-        toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
-        setTimeout(() => {
+        toast.error("Você não possui acesso a este recurso! Faça um upgrade em sua assinatura ou contate o suporte!");
+        setTimeout(() => {          
           history.push(`/`)
-        }, 1000);
+        }, 500);
       }
     }
     fetchData();
@@ -120,11 +116,11 @@ const CampaignReport = () => {
   }, [delivered, validContacts]);
 
   useEffect(() => {
-    const companyId = user.companyId;
-    // const socket = socketManager.GetSocket();
+    const companyId = localStorage.getItem("companyId");
+    const socket = socketManager.GetSocket(companyId);
 
-    const onCampaignEvent = (data) => {
-
+    const onCampaign = (data) => {
+  
       if (data.record.id === +campaignId) {
         setCampaign(data.record);
 
@@ -134,14 +130,15 @@ const CampaignReport = () => {
           }, 5000);
         }
       }
-    };
-    socket.on(`company-${companyId}-campaign`, onCampaignEvent);
+    }
 
+    socket.on(`company-${companyId}-campaign`, onCampaign);
+    
     return () => {
-      socket.off(`company-${companyId}-campaign`, onCampaignEvent);
+      socket.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId]);
+  }, [campaignId, socketManager]);
 
   const findCampaign = async () => {
     setLoading(true);
@@ -153,15 +150,15 @@ const CampaignReport = () => {
   const formatStatus = (val) => {
     switch (val) {
       case "INATIVA":
-        return i18n.t("campaignReport.inactive");
+        return "Inativa";
       case "PROGRAMADA":
-        return i18n.t("campaignReport.scheduled");
+        return "Programada";
       case "EM_ANDAMENTO":
-        return i18n.t("campaignReport.process");
+        return "Em Andamento";
       case "CANCELADA":
-        return i18n.t("campaignReport.cancelled");
+        return "Cancelada";
       case "FINALIZADA":
-        return i18n.t("campaignReport.finished");
+        return "Finalizada";
       default:
         return val;
     }
@@ -172,7 +169,7 @@ const CampaignReport = () => {
       <MainHeader>
         <Grid style={{ width: "99.6%" }} container>
           <Grid xs={12} item>
-            <Title>{i18n.t("campaignReport.title")} {campaign.name || i18n.t("campaignReport.campaign")}</Title>
+            <Title>Relatório da {campaign.name || "Campanha"}</Title>
           </Grid>
         </Grid>
       </MainHeader>
@@ -191,7 +188,7 @@ const CampaignReport = () => {
           <Grid xs={12} md={4} item>
             <CardCounter
               icon={<GroupIcon fontSize="inherit" />}
-              title={i18n.t("campaignReport.validContacts")}
+              title="Contatos Válidos"
               value={validContacts}
               loading={loading}
             />
@@ -201,7 +198,7 @@ const CampaignReport = () => {
               <Grid xs={12} md={4} item>
                 <CardCounter
                   icon={<DoneIcon fontSize="inherit" />}
-                  title={i18n.t("campaignReport.confirmationsRequested")}
+                  title="Confirmações Solicitadas"
                   value={confirmationRequested}
                   loading={loading}
                 />
@@ -209,7 +206,7 @@ const CampaignReport = () => {
               <Grid xs={12} md={4} item>
                 <CardCounter
                   icon={<DoneAllIcon fontSize="inherit" />}
-                  title={i18n.t("campaignReport.confirmations")}
+                  title="Confirmações"
                   value={confirmed}
                   loading={loading}
                 />
@@ -219,7 +216,7 @@ const CampaignReport = () => {
           <Grid xs={12} md={4} item>
             <CardCounter
               icon={<CheckCircleIcon fontSize="inherit" />}
-              title={i18n.t("campaignReport.deliver")}
+              title="Entregues"
               value={delivered}
               loading={loading}
             />
@@ -228,8 +225,8 @@ const CampaignReport = () => {
             <Grid xs={12} md={4} item>
               <CardCounter
                 icon={<WhatsAppIcon fontSize="inherit" />}
-                title={i18n.t("campaignReport.connection")}
-                value={campaign.whatsapp.name}
+                title="Conexão"
+                value={campaign.whatsappId}
                 loading={loading}
               />
             </Grid>
@@ -238,7 +235,7 @@ const CampaignReport = () => {
             <Grid xs={12} md={4} item>
               <CardCounter
                 icon={<ListAltIcon fontSize="inherit" />}
-                title={i18n.t("campaignReport.contactLists")}
+                title="Lista de Contatos"
                 value={campaign.contactList.name}
                 loading={loading}
               />
@@ -247,7 +244,7 @@ const CampaignReport = () => {
           <Grid xs={12} md={4} item>
             <CardCounter
               icon={<ScheduleIcon fontSize="inherit" />}
-              title={i18n.t("campaignReport.schedule")}
+              title="Agendamento"
               value={datetimeToClient(campaign.scheduledAt)}
               loading={loading}
             />
@@ -255,7 +252,7 @@ const CampaignReport = () => {
           <Grid xs={12} md={4} item>
             <CardCounter
               icon={<EventAvailableIcon fontSize="inherit" />}
-              title={i18n.t("campaignReport.conclusion")}
+              title="Conclusão"
               value={datetimeToClient(campaign.completedAt)}
               loading={loading}
             />

@@ -5,37 +5,53 @@ import Ticket from "../models/Ticket";
 import CreateTicketService from "../services/TicketServices/CreateTicketService";
 import DeleteTicketService from "../services/TicketServices/DeleteTicketService";
 import ListTicketsService from "../services/TicketServices/ListTicketsService";
+import ListTicketsServiceDash from "../services/TicketServices/ListTicketsServiceDash";
+import ListTicketsServiceKanban from "../services/TicketServices/ListTicketsServiceKanban";
 import ShowTicketUUIDService from "../services/TicketServices/ShowTicketFromUUIDService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
-import ListTicketsServiceKanban from "../services/TicketServices/ListTicketsServiceKanban";
-
-import CreateLogTicketService from "../services/TicketServices/CreateLogTicketService";
-import ShowLogTicketService from "../services/TicketServices/ShowLogTicketService";
-import FindOrCreateATicketTrakingService from "../services/TicketServices/FindOrCreateATicketTrakingService";
 import ListTicketsServiceReport from "../services/TicketServices/ListTicketsServiceReport";
-import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
-import { Mutex } from "async-mutex";
+import CreateGroupService from "../services/GroupService/CreateGroupService";
+import User from "../models/User";
+import Whatsapp from "../models/Whatsapp";
 
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
   status: string;
-  date?: string;
-  dateStart?: string;
-  dateEnd?: string;
+  date: string;
   updatedAt?: string;
   showAll: string;
-  withUnreadMessages?: string;
-  queueIds?: string;
-  tags?: string;
-  users?: string;
-  whatsapps: string;
-  statusFilter: string;
-  isGroup?: string;
-  sortTickets?: string;
-  searchOnMessages?: string;
+  withUnreadMessages: string;
+  queueIds: string;
+  tags: string;
+  users: string;
+  dateFrom: string;
+  dateUntil: string;
 };
+
+interface TicketData {
+  contactId: number;
+  status: string;
+  queueId: number;
+  userId: number;
+  whatsappId?: number;
+  justClose: boolean;
+  sendFarewellMessage?: boolean;
+  oportunidadeId?: number
+  assignedUsers?: []
+}
+interface CreateTicketGroupData {
+  contactsAddGroup: string[];
+  status: string;
+  queueId: number;
+  userId: number;
+  whatsappId?: number;
+  justClose: boolean;
+  sendFarewellMessage?: boolean;
+  oportunidadeId?: number
+  titleGroup: string;
+}
 
 type IndexQueryReport = {
   searchParam: string;
@@ -49,26 +65,14 @@ type IndexQueryReport = {
   users: string;
   page: string;
   pageSize: string;
-  onlyRated: string;
+  ticketId: string
 };
-
-
-interface TicketData {
-  contactId: number;
-  status: string;
-  queueId: number;
-  userId: number;
-  sendFarewellMessage?: boolean;
-  whatsappId?: string;
-}
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const {
     pageNumber,
     status,
     date,
-    dateStart,
-    dateEnd,
     updatedAt,
     searchParam,
     showAll,
@@ -76,20 +80,18 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     tags: tagIdsStringified,
     users: userIdsStringified,
     withUnreadMessages,
-    whatsapps: whatsappIdsStringified,
-    statusFilter: statusStringfied,
-    sortTickets,
-    searchOnMessages
+    dateFrom,
+    dateUntil
   } = req.query as IndexQuery;
 
-  const userId = Number(req.user.id);
+  const userId = req.user.id;
   const { companyId } = req.user;
 
   let queueIds: number[] = [];
   let tagsIds: number[] = [];
   let usersIds: number[] = [];
-  let whatsappIds: number[] = [];
-  let statusFilters: string[] = [];
+  const wbots: number[] = [];
+
 
   if (queueIdsStringified) {
     queueIds = JSON.parse(queueIdsStringified);
@@ -103,13 +105,15 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     usersIds = JSON.parse(userIdsStringified);
   }
 
-  if (whatsappIdsStringified) {
-    whatsappIds = JSON.parse(whatsappIdsStringified);
-  }
+  const user = await User.findByPk(req.user.id, {
+    include: [
+      { model: Whatsapp, as: "wbots", attributes: ["id", "name"] }
+    ]
+  });
 
-  if (statusStringfied) {
-    statusFilters = JSON.parse(statusStringfied);
-  }
+  user.wbots.forEach(wbot => {
+    wbots.push(wbot.id);
+  });
 
   const { tickets, count, hasMore } = await ListTicketsService({
     searchParam,
@@ -118,19 +122,18 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     pageNumber,
     status,
     date,
-    dateStart,
-    dateEnd,
     updatedAt,
     showAll,
     userId,
     queueIds,
     withUnreadMessages,
-    whatsappIds,
-    statusFilters,
     companyId,
-    sortTickets,
-    searchOnMessages
+    dateFrom,
+    dateUntil,
+    wbots,
   });
+
+  //console.log("ticket controller 82");
 
   return res.status(200).json({ tickets, count, hasMore });
 };
@@ -138,6 +141,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const report = async (req: Request, res: Response): Promise<Response> => {
   const {
     searchParam,
+    ticketId,
     contactId,
     whatsappId: whatsappIdsStringified,
     dateFrom,
@@ -147,10 +151,8 @@ export const report = async (req: Request, res: Response): Promise<Response> => 
     tags: tagIdsStringified,
     users: userIdsStringified,
     page: pageNumber,
-    pageSize,
-    onlyRated
+    pageSize
   } = req.query as IndexQueryReport;
-
 
   const userId = req.user.id;
   const { companyId } = req.user;
@@ -186,6 +188,7 @@ export const report = async (req: Request, res: Response): Promise<Response> => 
     companyId,
     {
       searchParam,
+      ticketId,
       queueIds,
       tags: tagsIds,
       users: usersIds,
@@ -194,24 +197,20 @@ export const report = async (req: Request, res: Response): Promise<Response> => 
       dateTo,
       userId,
       contactId,
-      whatsappId: whatsappIds,
-      onlyRated: onlyRated
+      whatsappId: whatsappIds
     },
     +pageNumber,
-
     +pageSize
   );
 
   return res.status(200).json({ tickets, totalTickets });
 };
 
-export const kanban = async (req: Request, res: Response): Promise<Response> => {
+export const dash = async (req: Request, res: Response): Promise<Response> => {
   const {
     pageNumber,
     status,
     date,
-    dateStart,
-    dateEnd,
     updatedAt,
     searchParam,
     showAll,
@@ -221,6 +220,63 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
     withUnreadMessages
   } = req.query as IndexQuery;
 
+  const userId = req.user.id;
+  const { companyId } = req.user;
+
+  let queueIds: number[] = [];
+  let tagsIds: number[] = [];
+  let usersIds: number[] = [];
+
+  if (queueIdsStringified) {
+    queueIds = JSON.parse(queueIdsStringified);
+  }
+
+  if (tagIdsStringified) {
+    tagsIds = JSON.parse(tagIdsStringified);
+  }
+
+  if (userIdsStringified) {
+    usersIds = JSON.parse(userIdsStringified);
+  }
+
+  const { tickets, count, hasMore } = await ListTicketsServiceDash({
+    searchParam,
+    tags: tagsIds,
+    users: usersIds,
+    pageNumber,
+    status,
+    date,
+    updatedAt,
+    showAll,
+    userId,
+    queueIds,
+    withUnreadMessages,
+    companyId
+  });
+
+  //console.log("ticket controller 82");
+
+  return res.status(200).json({ tickets, count, hasMore });
+};
+
+export const kanban = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const {
+    pageNumber,
+    status,
+    date,
+    updatedAt,
+    searchParam,
+    showAll,
+    queueIds: queueIdsStringified,
+    tags: tagIdsStringified,
+    users: userIdsStringified,
+    withUnreadMessages,
+    dateFrom,
+    dateUntil
+  } = req.query as IndexQuery;
 
   const userId = req.user.id;
   const { companyId } = req.user;
@@ -248,22 +304,24 @@ export const kanban = async (req: Request, res: Response): Promise<Response> => 
     pageNumber,
     status,
     date,
-    dateStart,
-    dateEnd,
     updatedAt,
     showAll,
     userId,
     queueIds,
     withUnreadMessages,
-    companyId
-
+    companyId,
+    dateFrom,
+    dateUntil
   });
+
+  //console.log("ticket controller 82");
 
   return res.status(200).json({ tickets, count, hasMore });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { contactId, status, userId, queueId, whatsappId }: TicketData = req.body;
+  const { contactId, status, userId, queueId, whatsappId }: TicketData =
+    req.body;
   const { companyId } = req.user;
 
   const ticket = await CreateTicketService({
@@ -276,38 +334,24 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.of(String(companyId))
-    // .to(ticket.status)
+  io.to(`company-${companyId}-${ticket.status}`)
+    .to(`queue-${ticket.queueId}-${ticket.status}`)
     .emit(`company-${companyId}-ticket`, {
       action: "update",
       ticket
     });
+
+  //console.log("ticket controller 106");
 
   return res.status(200).json(ticket);
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
-  const { id: userId, companyId } = req.user;
+  const { companyId } = req.user;
 
   const contact = await ShowTicketService(ticketId, companyId);
-
-  await CreateLogTicketService({
-    userId,
-    ticketId,
-    type: "access"
-  });
-
   return res.status(200).json(contact);
-};
-
-export const showLog = async (req: Request, res: Response): Promise<Response> => {
-  const { ticketId } = req.params;
-  const { id: userId, companyId } = req.user;
-
-  const log = await ShowLogTicketService({ ticketId, companyId });
-
-  return res.status(200).json(log);
 };
 
 export const showFromUUID = async (
@@ -315,19 +359,8 @@ export const showFromUUID = async (
   res: Response
 ): Promise<Response> => {
   const { uuid } = req.params;
-  const { id: userId, companyId } = req.user;
 
-
-  const ticket: Ticket = await ShowTicketUUIDService(uuid, companyId);
-
-  if (ticket.channel === "whatsapp" && ticket.whatsappId && ticket.unreadMessages > 0) {
-    SetTicketMessagesAsRead(ticket);
-  }
-  await CreateLogTicketService({
-    userId,
-    ticketId: ticket.id,
-    type: "access"
-  });
+  const ticket: Ticket = await ShowTicketUUIDService(uuid);
 
   return res.status(200).json(ticket);
 };
@@ -338,16 +371,13 @@ export const update = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
+
   const { companyId } = req.user;
 
-  const mutex = new Mutex();
-  const { ticket } = await mutex.runExclusive(async () => {
-    const result = await UpdateTicketService({
-      ticketData,
-      ticketId,
-      companyId
-    });
-    return result;
+  const { ticket } = await UpdateTicketService({
+    ticketData,
+    ticketId,
+    companyId
   });
 
   return res.status(200).json(ticket);
@@ -358,18 +388,18 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { ticketId } = req.params;
-  const { id: userId, companyId } = req.user;
+  const { companyId } = req.user;
 
-  // await ShowTicketService(ticketId, companyId);
+  await ShowTicketService(ticketId, companyId);
 
-  const ticket = await DeleteTicketService(ticketId, userId, companyId);
+  const ticket = await DeleteTicketService(ticketId);
 
   const io = getIO();
-
-  io.of(String(companyId))
-    // .to(ticket.status)
-    // .to(ticketId)
-    // .to("notification")
+  io.to(ticketId)
+    .to(`company-${companyId}-${ticket.status}`)
+    .to(`company-${companyId}-notification`)
+    .to(`queue-${ticket.queueId}-${ticket.status}`)
+    .to(`queue-${ticket.queueId}-notification`)
     .emit(`company-${companyId}-ticket`, {
       action: "delete",
       ticketId: +ticketId
@@ -378,30 +408,12 @@ export const remove = async (
   return res.status(200).json({ message: "ticket deleted" });
 };
 
-export const closeAll = async (req: Request, res: Response): Promise<Response> => {
-  const { companyId } = req.user;
-  const { status }: TicketData = req.body;
-  const io = getIO();
+export const kbu = async (req: Request, res: Response): Promise<Response> => {
+  const { queueIds: queueIdsStringified } = req.query as IndexQuery;
+  //console.log(req.query);
+  const queueIds: number[] = queueIdsStringified
+    ? JSON.parse(queueIdsStringified)
+    : [];
 
-  const { rows: tickets } = await Ticket.findAndCountAll({
-    where: { companyId: companyId, status: status },
-    order: [["updatedAt", "DESC"]]
-  });
-
-  tickets.forEach(async ticket => {
-
-    const ticketData = {
-      status: "closed",
-      userId: ticket.userId || null,
-      queueId: ticket.queueId || null,
-      unreadMessages: 0,
-      amountUsedBotQueues: 0,
-      sendFarewellMessage: false
-    };
-
-    await UpdateTicketService({ ticketData, ticketId: ticket.id, companyId })
-
-  });
-
-  return res.status(200).json();
+  return res.status(200).json({ message: "teste" });
 };

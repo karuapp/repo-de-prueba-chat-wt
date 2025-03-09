@@ -1,14 +1,3 @@
-import openSocket from "socket.io-client";
-import { isObject } from "lodash";
-import SocketWorker from "./SocketWorker"
-
-export function socketConnection(params) {
-  let userId = "";
-  let companyId = "";
-  if (isObject(params)){
-    companyId = params?.user?.companyId
-    userId = params?.user?.id
-  }
- 
-  return SocketWorker(companyId,userId)
+export function socketConnection(_) {
+  throw new Error("socketConnection not supported anymore. Change to SocketContext");
 }

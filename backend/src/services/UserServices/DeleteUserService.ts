@@ -11,6 +11,10 @@ const DeleteUserService = async (
     where: { id }
   });
 
+  if(user.id === 1){
+  	throw new AppError("CAN_NOT_REMOVE_MASTER_USER", 404);
+  }
+
   if (!user) {
     throw new AppError("ERR_NO_USER_FOUND", 404);
   }

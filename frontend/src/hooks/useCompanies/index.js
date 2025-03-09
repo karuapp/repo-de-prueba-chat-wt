@@ -10,6 +10,18 @@ const useCompanies = () => {
         });
         return responseData;
     }
+    
+    const saveInternal = async (data) => {
+        const { data: responseData } = await api.request({
+            url: '/companies/internal',
+            method: 'POST',
+            data
+        });
+    
+        //console.log(responseData);
+    
+        return responseData;
+    }
 
     const findAll = async (id) => {
         const { data } = await api.request({
@@ -34,6 +46,15 @@ const useCompanies = () => {
         });
         return data;
     }
+
+    const finding = async (id) => {
+        const { data } = await api.request({
+            url: `/companies/${id}`,
+            method: 'GET'
+        });
+        return data;
+    }
+
 
     const update = async (data) => {
         const { data: responseData } = await api.request({
@@ -63,10 +84,12 @@ const useCompanies = () => {
 
     return {
         save,
+        saveInternal,
         update,
         remove,
         list,
         find,
+        finding,
         findAll,
         updateSchedules
     }

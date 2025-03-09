@@ -12,22 +12,21 @@ import Title from "../../components/Title";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-// import MessageModal from "../../components/MessageModal"
 import ScheduleModal from "../../components/ScheduleModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import moment from "moment";
-// import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import usePlans from "../../hooks/usePlans";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import "moment/locale/pt-br";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import SearchIcon from "@material-ui/icons/Search";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import Tooltip from "@material-ui/core/Tooltip";
 
 import "./Schedules.css"; // Importe o arquivo CSS
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 // Defina a função getUrlParam antes de usá-la
 function getUrlParam(paramName) {
@@ -66,19 +65,7 @@ var defaultMessages = {
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_SCHEDULES") {
-    const schedules = action.payload;
-    const newSchedules = [];
-
-    schedules.forEach((schedule) => {
-      const scheduleIndex = state.findIndex((s) => s.id === schedule.id);
-      if (scheduleIndex !== -1) {
-        state[scheduleIndex] = schedule;
-      } else {
-        newSchedules.push(schedule);
-      }
-    });
-
-    return [...state, ...newSchedules];
+    return [...state, ...action.payload];
   }
 
   if (action.type === "UPDATE_SCHEDULES") {
@@ -95,17 +82,14 @@ const reducer = (state, action) => {
 
   if (action.type === "DELETE_SCHEDULE") {
     const scheduleId = action.payload;
-
-    const scheduleIndex = state.findIndex((s) => s.id === scheduleId);
-    if (scheduleIndex !== -1) {
-      state.splice(scheduleIndex, 1);
-    }
-    return [...state];
+    return state.filter((s) => s.id !== scheduleId);
   }
 
   if (action.type === "RESET") {
     return [];
   }
+
+  return state;
 };
 
 const useStyles = makeStyles((theme) => ({
@@ -115,36 +99,14 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
-  calendarToolbar: {
-    '& .rbc-toolbar-label': {
-      color: theme.mode === "light" ? theme.palette.light : "white",
-    },
-    '& .rbc-btn-group button': {
-      color: theme.mode === "light" ? theme.palette.light : "white",
-      '&:hover': {
-        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-      },
-      '&:active': {
-        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-      },
-      '&:focus': {
-        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-      },
-      '&.rbc-active': {
-        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
-      },
-    },
-  },
 }));
 
 const Schedules = () => {
   const classes = useStyles();
   const history = useHistory();
 
-  //   const socketManager = useContext(SocketContext);
-  const { user, socket } = useContext(AuthContext);
-
-
+  const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -156,25 +118,10 @@ const Schedules = () => {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [contactId, setContactId] = useState(+getUrlParam("contactId"));
 
-  const { getPlanCompany } = usePlans();
-
-  useEffect(() => {
-    async function fetchData() {
-      const companyId = user.companyId;
-      const planConfigs = await getPlanCompany(undefined, companyId);
-      if (!planConfigs.plan.useSchedules) {
-        toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
-        setTimeout(() => {
-          history.push(`/`)
-        }, 1000);
-      }
-    }
-    fetchData();
-  }, [user, history, getPlanCompany]);
 
   const fetchSchedules = useCallback(async () => {
     try {
-      const { data } = await api.get("/schedules", {
+      const { data } = await api.get("/schedules/", {
         params: { searchParam, pageNumber },
       });
 
@@ -212,26 +159,25 @@ const Schedules = () => {
   ]);
 
   useEffect(() => {
-    // handleOpenScheduleModalFromContactId();
-    // const socket = socketManager.GetSocket(user.companyId, user.id);
+    handleOpenScheduleModalFromContactId();
+    const socket = socketManager.GetSocket(user.companyId);
 
-
-    const onCompanySchedule = (data) => {
+    const onSchedule = (data) => {
       if (data.action === "update" || data.action === "create") {
-        dispatch({ type: "UPDATE_SCHEDULES", payload: data.schedule });
+        dispatch({ type: "UPDATE_SCHEDULES", payload: data?.schedules || data?.schedule });
       }
 
       if (data.action === "delete") {
-        dispatch({ type: "DELETE_SCHEDULE", payload: +data.scheduleId });
+        dispatch({ type: "DELETE_USER", payload: +data.scheduleId });
       }
     }
 
-    socket.on(`company${user.companyId}-schedule`, onCompanySchedule)
+    socket.on(`company-${user.companyId}-schedule`, onSchedule);
 
     return () => {
-      socket.off(`company${user.companyId}-schedule`, onCompanySchedule)
+      socket.disconnect();
     };
-  }, [socket]);
+  }, [handleOpenScheduleModalFromContactId, user, socketManager]);
 
   const cleanContact = () => {
     setContactId("");
@@ -304,19 +250,15 @@ const Schedules = () => {
       >
         {i18n.t("schedules.confirmationModal.deleteMessage")}
       </ConfirmationModal>
-      {scheduleModalOpen && (
-        <ScheduleModal
-          open={scheduleModalOpen}
-          onClose={handleCloseScheduleModal}
-          reload={fetchSchedules}
-          // aria-labelledby="form-dialog-title"
-          scheduleId={
-            selectedSchedule ? selectedSchedule.id : null
-          }
-          contactId={contactId}
-          cleanContact={cleanContact}
-        />
-      )}
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onClose={handleCloseScheduleModal}
+        reload={fetchSchedules}
+        aria-labelledby="form-dialog-title"
+        scheduleId={selectedSchedule && selectedSchedule.id}
+        contactId={contactId}
+        cleanContact={cleanContact}
+      />
       <MainHeader>
         <Title>{i18n.t("schedules.title")} ({schedules.length})</Title>
         <MainHeaderButtonsWrapper>
@@ -346,25 +288,30 @@ const Schedules = () => {
         <Calendar
           messages={defaultMessages}
           formats={{
-            agendaDateFormat: "DD/MM ddd",
-            weekdayFormat: "dddd"
-          }}
+          agendaDateFormat: "DD/MM ddd",
+          weekdayFormat: "dddd"
+      }}
           localizer={localizer}
           events={schedules.map((schedule) => ({
             title: (
-              <div key={schedule.id} className="event-container">
-                <div style={eventTitleStyle}>{schedule?.contact?.name}</div>
-                <DeleteOutlineIcon
-                  onClick={() => handleDeleteSchedule(schedule.id)}
-                  className="delete-icon"
-                />
-                <EditIcon
-                  onClick={() => {
-                    handleEditSchedule(schedule);
-                    setScheduleModalOpen(true);
-                  }}
-                  className="edit-icon"
-                />
+              <div className="event-container">
+                <div style={eventTitleStyle}>{schedule.contact.name}</div>
+                <Tooltip title="Excluir">
+                  <DeleteOutlineIcon
+                    onClick={() => handleDeleteSchedule(schedule.id)}
+                    className="delete-icon"
+                  />
+                </Tooltip>
+
+                <Tooltip title="Editar">
+                  <EditIcon
+                    onClick={() => {
+                      handleEditSchedule(schedule);
+                      setScheduleModalOpen(true);
+                    }}
+                    className="edit-icon"
+                  />
+                </Tooltip>
               </div>
             ),
             start: new Date(schedule.sendAt),
@@ -373,7 +320,6 @@ const Schedules = () => {
           startAccessor="start"
           endAccessor="end"
           style={{ height: 500 }}
-          className={classes.calendarToolbar}
         />
       </Paper>
     </MainContainer>

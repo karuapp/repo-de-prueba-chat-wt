@@ -1,7 +1,6 @@
 import { Box, Chip, TextField } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import React, { useEffect, useState } from "react";
-import { i18n } from "../../translate/i18n";
 
 
 export function StatusFilter({ onFiltered }) {
@@ -20,9 +19,9 @@ export function StatusFilter({ onFiltered }) {
   };
 
   const status = [
-    { status: 'open', name: `${i18n.t("tickets.search.filterConectionsOptions.open")}` },
-    { status: 'closed', name: `${i18n.t("tickets.search.filterConectionsOptions.closed")}` },
-    { status: 'pending', name: `${i18n.t("tickets.search.filterConectionsOptions.pending")}` },
+    { status: 'open', name: 'Aberto' },
+    { status: 'closed', name: 'Fechado' },
+    { status: 'pending', name: 'Pendente' },
     { status: 'group', name: 'Grupos' },
 
   ]

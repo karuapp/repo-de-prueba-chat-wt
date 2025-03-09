@@ -1,58 +1,39 @@
 import { Request, Response } from "express";
+import authConfig from "../config/auth";
+import * as Yup from "yup";
 
 import { getIO } from "../libs/socket";
 import AppError from "../errors/AppError";
 
+import { head } from "lodash";
+import fs from "fs";
+import path from "path";
+import User from "../models/User";
+import Company from "../models/Company";
+
 import UpdateSettingService from "../services/SettingServices/UpdateSettingService";
 import ListSettingsService from "../services/SettingServices/ListSettingsService";
-import ListSettingsServiceOne from "../services/SettingServices/ListSettingsServiceOne";
-import GetSettingService from "../services/SettingServices/GetSettingService";
-import UpdateOneSettingService from "../services/SettingServices/UpdateOneSettingService";
-import GetPublicSettingService from "../services/SettingServices/GetPublicSettingService";
-
-type LogoRequest = {
-  mode: string;
-};
-
-type PrivateFileRequest = {
-  settingKey: string;
-};
+import ShowSettingsService from "../services/SettingServices/ShowSettingsService";
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { companyId } = req.user;
 
-  // if (req.user.profile !== "admin") {
-  //   throw new AppError("ERR_NO_PERMISSION", 403);
-  // }
+  //if (req.user.profile !== "admin") {
+    //throw new AppError("ERR_NO_PERMISSION", 403);
+  //}
 
   const settings = await ListSettingsService({ companyId });
 
   return res.status(200).json(settings);
 };
 
-export const showOne = async (req: Request, res: Response): Promise<Response> => {
-  const { companyId } = req.user;
-  const { settingKey: key } = req.params;
-
-  console.log("|======== GetPublicSettingService ========|")
-  console.log("key", key)
-  console.log("|=========================================|")
-
-  
-  const settingsTransfTicket = await ListSettingsServiceOne({ companyId: companyId, key: key });
-
-  return res.status(200).json(settingsTransfTicket);
-};
-
 export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-
   if (req.user.profile !== "admin") {
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
-
   const { settingKey: key } = req.params;
   const { value } = req.body;
   const { companyId } = req.user;
@@ -64,8 +45,7 @@ export const update = async (
   });
 
   const io = getIO();
-  io.of(String(companyId))
-  .emit(`company-${companyId}-settings`, {
+ io.emit(`company-${companyId}-settings`, {
     action: "update",
     setting
   });
@@ -73,84 +53,106 @@ export const update = async (
   return res.status(200).json(setting);
 };
 
-export const getSetting = async (
-  req: Request,
-  res: Response): Promise<Response> => {
 
-  const { settingKey: key } = req.params;
-
-  const setting = await GetSettingService({ key });
-
-  return res.status(200).json(setting);
-
-}
-
-export const updateOne = async (
+export const show = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
 
-  const { settingKey: key } = req.params;
-  const { value } = req.body;
+  //const { companyId } = req.user;
+  const companyId = 1;
+  const { settingKey } = req.params;
+  
 
-  const setting = await UpdateOneSettingService({
-    key,
-    value
-  });
+  const retornoData = await ShowSettingsService({ settingKey, companyId });
 
-  return res.status(200).json(setting); 
+  return res.status(200).json(retornoData);
 };
 
-export const publicShow = async (req: Request, res: Response): Promise<Response> => {
-  console.log("|=============== publicShow  ==============|")
-  
-  const { settingKey: key } = req.params;
-  
-  const settingValue = await GetPublicSettingService({ key });
 
+export const mediaUpload = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { body } = req.body;
+  const { companyId } = req.user;
 
-  return res.status(200).json(settingValue);
+  const userId = req.user.id;
+  const requestUser = await User.findByPk(userId);
+
+  if (requestUser.super === false) {
+    throw new AppError("você nao tem permissão para esta ação!");
+  }
+
+  if (req.user.profile !== "admin") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  if (companyId !== 1) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const files = req.files as Express.Multer.File[];
+  const file = head(files);
+  console.log(file);
+  return res.send({ mensagem: "Arquivo Anexado" });
 };
 
-export const storeLogo = async (req: Request, res: Response): Promise<Response> => {
-  const file = req.file as Express.Multer.File;
-  const { mode }: LogoRequest = req.body;
-  const { companyId } = req.user;
-  const validModes = [ "Light", "Dark", "Favicon" ];
 
-  console.log("|=============== storeLogo  ==============|", storeLogo)
-
-  if ( validModes.indexOf(mode) === -1 ) {
-    return res.status(406);
-  }
-
-  if (file && file.mimetype.startsWith("image/")) {
-    
-    const setting = await UpdateSettingService({
-      key: `appLogo${mode}`,
-      value: file.filename,
-      companyId
-    });
-    
-    return res.status(200).json(setting.value);
-  }
-  
-  return res.status(406);
-}
-
-export const storePrivateFile = async (req: Request, res: Response): Promise<Response> => {
-  const file = req.file as Express.Multer.File;
-  const { settingKey }: PrivateFileRequest = req.body;
+export const certUpload = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { body } = req.body;
   const { companyId } = req.user;
 
+  const userId = req.user.id;
+  const requestUser = await User.findByPk(userId);
 
-  console.log("|=============== storePrivateFile  ==============|", storeLogo)
+  if (requestUser.super === false) {
+    throw new AppError("você nao tem permissão para esta ação!");
+  }
 
-  const setting = await UpdateSettingService({
-    key: `_${settingKey}`,
-    value: file.filename,
-    companyId
-  });
-  
-  return res.status(200).json(setting.value);
-}
+  if (req.user.profile !== "admin") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  if (companyId !== 1) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const files = req.files as Express.Multer.File[];
+  const file = head(files);
+  console.log(file);
+  return res.send({ mensagem: "Arquivo Anexado" });
+};
+
+
+
+export const docUpload = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { body } = req.body;
+  const { companyId } = req.user;
+
+  const userId = req.user.id;
+  const requestUser = await User.findByPk(userId);
+
+  if (requestUser.super === false) {
+    throw new AppError("você nao tem permissão para esta ação!");
+  }
+
+  if (req.user.profile !== "admin") {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  if (companyId !== 1) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
+
+  const files = req.files as Express.Multer.File[];
+  const file = head(files);
+  console.log(file);
+  return res.send({ mensagem: "Arquivo Anexado" });
+};

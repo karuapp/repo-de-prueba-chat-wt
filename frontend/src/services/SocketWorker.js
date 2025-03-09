@@ -9,7 +9,6 @@ class SocketWorker {
       this.configureSocket();
       this.eventListeners = {}; // Armazena os ouvintes de eventos registrados
       SocketWorker.instance = this;
-
     } 
 
     return SocketWorker.instance;
@@ -56,19 +55,15 @@ class SocketWorker {
   off(event, callback) {
     this.connect();
     if (this.eventListeners[event]) {
-      // console.log("Desconectando do servidor Socket.IO:", event, callback);
       if (callback) {
         // Desconecta um ouvinte específico
         this.socket.off(event, callback);
         this.eventListeners[event] = this.eventListeners[event].filter(cb => cb !== callback);
       } else {
-        // console.log("DELETOU EVENTOS DO SOCKET:", this.eventListeners[event]);
-
         // Desconecta todos os ouvintes do evento
         this.eventListeners[event].forEach(cb => this.socket.off(event, cb));
         delete this.eventListeners[event];
       }
-      // console.log("EVENTOS DO SOCKET:", this.eventListeners);
     }
   }
 
@@ -95,10 +90,6 @@ class SocketWorker {
     if (!this.socket) {
       this.configureSocket();
     }
-  }
-
-  forceReconnect() {
-
   }
 }
 

@@ -8,61 +8,61 @@ import {
   CircularProgress,
 } from "@material-ui/core";
 import { Formik, Form } from "formik";
+
 import AddressForm from "./Forms/AddressForm";
 import PaymentForm from "./Forms/PaymentForm";
 import ReviewOrder from "./ReviewOrder";
 import CheckoutSuccess from "./CheckoutSuccess";
+
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
 import { AuthContext } from "../../context/Auth/AuthContext";
+
+
 import validationSchema from "./FormModel/validationSchema";
 import checkoutFormModel from "./FormModel/checkoutFormModel";
 import formInitialValues from "./FormModel/formInitialValues";
+
 import useStyles from "./styles";
+import Invoices from "../../pages/Financeiro";
+
 
 export default function CheckoutPage(props) {
   const steps = ["Dados", "Personalizar", "Revisar"];
   const { formId, formField } = checkoutFormModel;
-
+  
+  
+  
   const classes = useStyles();
   const [activeStep, setActiveStep] = useState(1);
   const [datePayment, setDatePayment] = useState(null);
-  const [invoiceId, setInvoiceId] = useState(props.Invoice.id);
+  const [invoiceId, setinvoiceId] = useState(props.Invoice.id);
   const currentValidationSchema = validationSchema[activeStep];
   const isLastStep = activeStep === steps.length - 1;
   const { user } = useContext(AuthContext);
 
-  // Adicionando console.log para verificar o user
-  console.log("Dados do usuário:", user);
+function _renderStepContent(step, setFieldValue, setActiveStep, values ) {
 
-  function _renderStepContent(step, setFieldValue, setActiveStep, values) {
-    switch (step) {
-      case 0:
-        return <AddressForm formField={formField} values={values} setFieldValue={setFieldValue} />;
-      case 1:
-        return (
-          <PaymentForm
-            formField={formField}
-            setFieldValue={setFieldValue}
-            setActiveStep={setActiveStep}
-            activeStep={step}
-            invoiceId={invoiceId}
-            values={values}
-          />
-        );
-      case 2:
-        return (
-          <ReviewOrder 
-            firstName={values.firstName}
-            lastName={values.lastName}
-            cpf={values.cpf}
-          />
-        );
-      default:
-        return <div>Not Found</div>;
-    }
+  switch (step) {
+    case 0:
+      return <AddressForm formField={formField} values={values} setFieldValue={setFieldValue}  />;
+    case 1:
+      return <PaymentForm 
+      formField={formField} 
+      setFieldValue={setFieldValue} 
+      setActiveStep={setActiveStep} 
+      activeStep={step} 
+      invoiceId={invoiceId}
+      values={values}
+      />;
+    case 2:
+      return <ReviewOrder />;
+    default:
+      return <div>Not Found</div>;
   }
+}
+
 
   async function _submitForm(values, actions) {
     try {
@@ -70,7 +70,6 @@ export default function CheckoutPage(props) {
       const newValues = {
         firstName: values.firstName,
         lastName: values.lastName,
-        cpf: values.cpf,
         address2: values.address2,
         city: values.city,
         state: values.state,
@@ -85,10 +84,10 @@ export default function CheckoutPage(props) {
         users: plan.users,
         connections: plan.connections,
         invoiceId: invoiceId
-      };
+      }
 
       const { data } = await api.post("/subscription", newValues);
-      setDatePayment(data);
+      setDatePayment(data)
       actions.setSubmitting(false);
       setActiveStep(activeStep + 1);
       toast.success("Assinatura realizada com sucesso!, aguardando a realização do pagamento");
@@ -129,9 +128,7 @@ export default function CheckoutPage(props) {
         ) : (
           <Formik
             initialValues={{
-              firstName: user?.company?.name || '',
-              lastName: '', // Preencha aqui se tiver um sobrenome
-              cpf: user?.company?.document || '',
+              ...user, 
               ...formInitialValues
             }}
             validationSchema={currentValidationSchema}
@@ -142,7 +139,7 @@ export default function CheckoutPage(props) {
                 {_renderStepContent(activeStep, setFieldValue, setActiveStep, values)}
 
                 <div className={classes.buttons}>
-                  {activeStep !== 1 && activeStep !== 0 && (
+                  {activeStep !== 1 && (
                     <Button onClick={_handleBack} className={classes.button}>
                       VOLTAR
                     </Button>
@@ -160,7 +157,10 @@ export default function CheckoutPage(props) {
                       </Button>
                     )}
                     {isSubmitting && (
-                      <CircularProgress size={24} className={classes.buttonProgress} />
+                      <CircularProgress
+                        size={24}
+                        className={classes.buttonProgress}
+                      />
                     )}
                   </div>
                 </div>

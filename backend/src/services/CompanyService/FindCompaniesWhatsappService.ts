@@ -1,4 +1,6 @@
 import Company from "../../models/Company";
+import Plan from "../../models/Plan";
+import Setting from "../../models/Setting";
 import Whatsapp from "../../models/Whatsapp";
 
 const FindCompaniesWhatsappService = async (id: string | number): Promise<Company> => {

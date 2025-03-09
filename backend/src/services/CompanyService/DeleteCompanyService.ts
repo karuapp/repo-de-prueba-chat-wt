@@ -6,6 +6,10 @@ const DeleteCompanyService = async (id: string): Promise<void> => {
     where: { id }
   });
 
+  if(company.id === 1){
+    throw new AppError("CAN_NOT_REMOVE_MASTER_COMPANY", 404);
+  }
+
   if (!company) {
     throw new AppError("ERR_NO_COMPANY_FOUND", 404);
   }

@@ -1,6 +1,15 @@
 node_modules
 dist
+baileys_auth_info
+public/*
+/public/logotipos/
+/public/logotipos/*
 .env
+.env.test
+certs/certificadoEfi.p12
+contacts.csv
+
+package-lock.json
 yarn.lock
 yarn-error.log
 
@@ -9,4 +18,3 @@ yarn-error.log
 # Ignore test-related files
 /coverage.data
 /coverage/
-

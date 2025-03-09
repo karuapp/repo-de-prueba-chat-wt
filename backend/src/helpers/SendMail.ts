@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 
 export interface MailData {
   to: string;
+  from:string;
   subject: string;
   text?: string;
   html?: string;
@@ -10,6 +11,8 @@ export interface MailData {
 export async function SendMail(mailData: MailData) {
   const options: any = {
     host: process.env.MAIL_HOST,
+    port: process.env.MAIL_PORT,
+    secure: process.env.MAIL_SECURE,
     auth: {
       user: process.env.MAIL_USER,
       pass: process.env.MAIL_PASS
@@ -20,7 +23,7 @@ export async function SendMail(mailData: MailData) {
 
   // send mail with defined transport object
   let info = await transporter.sendMail({
-    from: process.env.MAIL_FROM, // sender address
+    from: mailData.from, //process.env.MAIL_FROM, // sender address
     to: mailData.to, // list of receivers
     subject: mailData.subject, // Subject line
     text: mailData.text, // plain text body

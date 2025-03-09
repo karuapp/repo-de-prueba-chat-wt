@@ -4,7 +4,7 @@ import Stepper from "@material-ui/core/Stepper";
 import Step from "@material-ui/core/Step";
 import StepLabel from "@material-ui/core/StepLabel";
 import Typography from "@material-ui/core/Typography";
-import { Button, IconButton, StepContent, TextField } from "@material-ui/core";
+import { AttachFileIcon, Button, IconButton, StepContent, TextField, MenuItem, Select, Chip, InputLabel } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import SaveIcon from "@material-ui/icons/Save";
@@ -12,10 +12,11 @@ import EditIcon from "@material-ui/icons/Edit";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
+
 const useStyles = makeStyles((theme) => ({
   root: {
     width: "100%",
-    height: 400,
+    //height: 400,
     [theme.breakpoints.down("sm")]: {
       maxHeight: "20vh",
     },
@@ -33,15 +34,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export function QueueOptionStepper({ queueId, options, updateOptions }) {
+export function QueueOptionStepper({ queueId, options, updateOptions, companyId }) {
   const classes = useStyles();
-  const [activeOption, setActiveOption] = useState(-1);
-
+  const [activeOption, setActiveOption] = useState(-1);  
+ 
   const handleOption = (index) => async () => {
     setActiveOption(index);
     const option = options[index];
 
     if (option !== undefined && option.id !== undefined) {
+
       try {
         const { data } = await api.request({
           url: "/queue-options",
@@ -116,13 +118,34 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
     updateOptions();
   };
 
+  const handleOptionChangeType = (event, index) => {
+    options[index].queueType = event.target.value;
+    updateOptions();
+  };
+
   const handleOptionChangeMessage = (event, index) => {
     options[index].message = event.target.value;
+    updateOptions();
+    
+  };
+
+  const handleOptionIds = (event, index) => {
+    options[index].queueOptionsId = event.target.value;
+    updateOptions();
+  };
+
+  const handleUsersIds = (event, index) => {
+    
+    //console.log(index);
+    //console.log(event.target.value);
+  
+    options[index].queueUsersId = event.target.value;
     updateOptions();
   };
 
   const renderTitle = (index) => {
-    const option = options[index];
+  const option = options[index];
+
     if (option.edition) {
       return (
         <>
@@ -133,8 +156,22 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
             className={classes.input}
             placeholder="Título da opção"
           />
-          {option.edition && (
+          {option.edition && (//RODRIGO - TRATAMENTO ALTERAÇÃO DO CHATBOT
             <>
+              <InputLabel>{"Selecione uma opção"}</InputLabel>
+              <Select
+                  value={option.queueType}
+                  size="small"
+                  onChange={(event) => handleOptionChangeType(event, index)}
+                  label="Tipo da opção"
+                  style={{ width: "40%" }}
+                >
+                  <MenuItem value={"text"}>Texto</MenuItem>
+                  <MenuItem value={"attendent"}>Atendente</MenuItem>
+                  <MenuItem value={"queue"}>Fila</MenuItem>
+                  <MenuItem value={"n8n"}>Externo (API)</MenuItem>
+                  {/* <MenuItem value={"file"}>Arquivo</MenuItem> */}
+              </Select>
               <IconButton
                 color="primary"
                 variant="outlined"
@@ -173,24 +210,184 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
         </Typography>
       </>
     );
-  };
+  };     
+
+  const [queues, setQueues] = useState([]);
+  const [usersList, setUsersList] = useState([]);
+  const [userId, setUserId] = useState([null]);
+  const [queuesUsers, setQueuesUsers] = useState([null]);
+
+   //console.log('FILAS DO USUARIO  >>>>>>>>>>>>>>>>>>>'+users.queues.map[0])
+  
+  useEffect(() => {
+		(async () => {
+			try {
+				const { data } = await api.get("/queue", {
+					params: { companyId }
+				});
+				setQueues(data);
+			} catch (err) {
+				toastError(err);
+			}
+		})();
+	}, [options, companyId]);
+
+	useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get(`/users/`,{params: companyId});
+        const userList = data.users;
+        setUsersList(userList);
+      } catch (err) {
+        toastError(err);
+      }
+    })();
+  }, [options, companyId]);
+
+  useEffect(() => {
+    (async () => {
+       try {
+          const { data } = await api.get(`/users/${userId}`);
+          
+          const userQueueIds = data.queues;
+          setQueuesUsers(userQueueIds);
+        } catch (err) {
+          toastError(err);
+        }
+    })();
+  }, [options, companyId, userId]);
 
   const renderMessage = (index) => {
-    const option = options[index];
-    if (option.edition) {
-      return (
+  const option = options[index];
+
+//RODRIGO - TRATAMENTO ALTERAÇÃO DO CHATBOT
+  if (option.edition) {
+      if (option.queueType === "text") {
+        return (
+          <>
+            <TextField
+              style={{ width: "100%" }}
+              multiline
+              value={option.message}
+              onChange={(event) => handleOptionChangeMessage(event, index)}
+              size="small"
+              className={classes.input}
+              placeholder="Digite o texto da opção"
+            />
+          </>
+        );
+      } 
+      
+      else if (option.queueType === "n8n" ) {
+        return (
+          <>
+            <TextField
+              style={{ width: "100%" }}
+              multiline
+              value={option.message}
+              onChange={(event) => handleOptionChangeMessage(event, index)}
+              size="small"
+              className={classes.input}
+              placeholder="Digite a URL de integração (N8N / TypeBOT ...)"
+            />
+          </>
+        );
+      }
+      
+      else if (option.queueType === "queue" ) {
+        return (
+          <>
+            <TextField
+              style={{ width: "100%" }}
+              multiline
+              value={option.message}
+              onChange={(event) => handleOptionChangeMessage(event, index)}
+              size="small"
+              className={classes.input}
+              placeholder="Digite o texto da opção"
+            />
+
+            <InputLabel>{"Selecione uma Fila"}</InputLabel>
+              <Select
+                    value={option.queueOptionsId}
+                    style={{ width: "40%" }}
+                    size="small"
+                    onChange={(event) => handleOptionIds(event, index)}
+                >
+                    {queues.map(queue => (
+                      <MenuItem key={queue.id} value={queue.id}>
+                        {queue.name}
+                      </MenuItem>
+                    ))}
+              </Select>
+          </>
+        );
+      }
+      else if (option.queueType === "attendent" ) {
+        return (
+          <>
+           <TextField
+              style={{ width: "100%" }}
+              multiline
+              value={option.message}
+              onChange={(event) => handleOptionChangeMessage(event, index)}
+              size="small"
+              className={classes.input}
+              placeholder="Digite o texto da opção"
+            />
+
+            <InputLabel>{"Selecione um Atendente"}</InputLabel>
+          <Select
+            value={option.queueUsersId}
+            style={{ width: "40%" }}
+            size="small"
+            onChange={(event) => handleUsersIds(event, index)}
+          >
+            {usersList.map((u) => (
+              <MenuItem key={u.id} value={u.id}>
+                {u.name}
+              </MenuItem>
+            ))}
+          </Select>
+
+              <InputLabel>{"Selecione uma Fila"}</InputLabel>
+              <Select
+                    value={option.queueOptionsId}
+                    style={{ width: "40%" }}
+                    size="small"
+                    onChange={(event) => handleOptionIds(event, index)}
+                >
+                    
+                    {queues.map(queue => (
+                      <MenuItem key={queue.id} value={queue.id}>
+                        {queue.name}
+                      </MenuItem>
+                    ))}
+              </Select>
+          </>
+
+            
+        );
+      } else if (option.queueType === "file"){
+        return (
         <>
           <TextField
-            style={{ width: "100%" }}
-            multiline
-            value={option.message}
-            onChange={(event) => handleOptionChangeMessage(event, index)}
-            size="small"
-            className={classes.input}
-            placeholder="Digite o texto da opção"
-          />
+              style={{ width: "100%" }}
+              multiline
+              value={option.message}
+              onChange={(event) => handleOptionChangeMessage(event, index)}
+              size="small"
+              className={classes.input}
+              placeholder="Digite o texto da opção"
+            />
+          {/* <Button startIcon={<AttachFileIcon />}>
+                          {attachment != null
+                            ? attachment.name
+                            : campaign.mediaName}
+          </Button> */}
         </>
-      );
+        );
+      }
     }
     return (
       <>
@@ -209,6 +406,9 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
       edition: false,
       option: optionNumber,
       queueId,
+      queueType: options[index].queueType,
+      queueOptionsId: options[index].queueOptionsId,
+      queueUsersId: options[index].queueUsersId,
       parentId: options[index].id,
       children: [],
     });
@@ -264,7 +464,7 @@ export function QueueOptionStepper({ queueId, options, updateOptions }) {
   return renderStepper();
 }
 
-export function QueueOptions({ queueId }) {
+export function QueueOptions({ queueId, companyId }) {
   const classes = useStyles();
   const [options, setOptions] = useState([]);
 
@@ -301,6 +501,7 @@ export function QueueOptions({ queueId }) {
           queueId={queueId}
           updateOptions={updateOptions}
           options={options}
+          companyId={companyId}
         />
       );
     }
@@ -317,6 +518,9 @@ export function QueueOptions({ queueId }) {
       edition: false,
       option: options.length + 1,
       queueId,
+      queueType: "",
+      queueOptionsId: null,
+      queueUsersId: null,
       parentId: null,
       children: [],
     };

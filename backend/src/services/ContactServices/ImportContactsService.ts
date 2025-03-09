@@ -3,7 +3,7 @@ import XLSX from "xlsx";
 import { has } from "lodash";
 import ContactListItem from "../../models/ContactListItem";
 import CheckContactNumber from "../WbotServices/CheckNumber";
-import logger from "../../utils/logger";
+import { logger } from "../../utils/logger";
 import Contact from "../../models/Contact";
 // import CheckContactNumber from "../WbotServices/CheckNumber";
 
@@ -20,18 +20,15 @@ export async function ImportContactsService(
     let number = "";
     let email = "";
 
-    if (has(row, "nome") || has(row, "Nome")) {
-      name = row["nome"] || row["Nome"];
+    if (has(row, "name") || has(row, "Name") || has(row, "Nome") || has(row, "nome")) {
+      name = row["name"] || row["Name"] || row["Nome"] || row["nome"];
     }
 
-    if (
-      has(row, "numero") ||
-      has(row, "número") ||
-      has(row, "Numero") ||
-      has(row, "Número")
-    ) {
-      number = row["numero"] || row["número"] || row["Numero"] || row["Número"];
+    if (has(row, "phone") || has(row, "Phone") || has(row, "Telefone") || has(row, "telefone")) {
+      number = row["phone"] || row["Phone"] || row["Telefone"] || row["telefone"];    
+    
       number = `${number}`.replace(/\D/g, "");
+    
     }
 
     if (

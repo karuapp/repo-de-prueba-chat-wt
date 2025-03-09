@@ -1,3 +1,20 @@
+/*import path from "path";
+import multer from "multer";
+
+const publicFolder = path.resolve(__dirname, "..", "..", "public");
+export default {
+  directory: publicFolder,
+
+  storage: multer.diskStorage({
+    destination: publicFolder,
+    filename(req, file, cb) {
+      const fileName = new Date().getTime() + path.extname(file.originalname);
+
+      return cb(null, fileName);
+    }
+  })
+};
+*/
 import path from "path";
 import multer from "multer";
 import fs from "fs";
@@ -13,7 +30,6 @@ export default {
 
       let companyId;
       companyId = req.user?.companyId
-      const { typeArch, fileId } = req.body;
 
       if (companyId === undefined && isNil(companyId) && isEmpty(companyId)) {
         const authHeader = req.headers.authorization;
@@ -21,29 +37,18 @@ export default {
         const whatsapp = await Whatsapp.findOne({ where: { token } });
         companyId = whatsapp.companyId;
       }
-      let folder;
 
-      if (typeArch && typeArch !== "announcements" && typeArch !== "logo") {
-        folder = path.resolve(publicFolder, `company${companyId}`, typeArch, fileId ? fileId : "")
-      } else if (typeArch && typeArch === "announcements") {
-        folder = path.resolve(publicFolder, typeArch)
-      } else if (typeArch === "logo") {
-        folder = path.resolve(publicFolder)
-      }
-      else {
-        folder = path.resolve(publicFolder, `company${companyId}`)
-      }
+      const folder = `${publicFolder}/company${companyId}/`
 
       if (!fs.existsSync(folder)) {
-        fs.mkdirSync(folder, { recursive: true })
+        fs.mkdirSync(folder);
         fs.chmodSync(folder, 0o777)
       }
       return cb(null, folder);
     },
     filename(req, file, cb) {
-      const { typeArch } = req.body;
-
-      const fileName = typeArch && typeArch !== "announcements" ? file.originalname.replace('/', '-').replace(/ /g, "_") : new Date().getTime() + '_' + file.originalname.replace('/', '-').replace(/ /g, "_");
+      const fileName = new Date().getTime() + '_' + file.originalname.replace('/','-');
+    
       return cb(null, fileName);
     }
   })

@@ -11,8 +11,8 @@ interface RefreshTokenPayload {
 
 export default async function FindUserFromToken(token: string): Promise<User> {
   const decoded = verify(token, authConfig.refreshSecret);
-  const { id, companyId } = decoded as RefreshTokenPayload;
+  const { id } = decoded as RefreshTokenPayload;
 
-  const user = await ShowUserService(id, companyId);
+  const user = await ShowUserService(id);
   return user;
 }

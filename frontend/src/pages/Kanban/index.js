@@ -1,254 +1,200 @@
-import React, { useState, useEffect, useContext } from "react";
-import { makeStyles, useTheme } from "@material-ui/core/styles";
-import api from "../../services/api";
-import { AuthContext } from "../../context/Auth/AuthContext";
+import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { makeStyles } from '@material-ui/core/styles';
+import api from '../../services/api';
+import { AuthContext } from '../../context/Auth/AuthContext';
 import Board from 'react-trello';
-import { toast } from "react-toastify";
-import { i18n } from "../../translate/i18n";
+import { toast } from 'react-toastify';
 import { useHistory } from 'react-router-dom';
-import { Facebook, Instagram, WhatsApp } from "@material-ui/icons";
-import { Badge, Tooltip, Typography, Button, TextField, Box } from "@material-ui/core";
-import { format, isSameDay, parseISO } from "date-fns";
-import { Can } from "../../components/Can";
+import usePlans from '../../hooks/usePlans';
+import useTickets from '../../hooks/useTickets';
+import { DatePickerMoment } from '../../components/DatePickerMoment';
+import { UsersFilter } from '../../components/UsersFilter';
+import { KanbanSearch } from '../../components/KanbanSearch/KanbanSearch';
+import moment from 'moment';
+import { IconButton, Tooltip } from '@material-ui/core';
+import AttachMoneyIcon from '@material-ui/icons/AttachMoney';
+import RatingModal from '../../components/OportunidadesModal';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
+    display: 'flex',
+    alignItems: 'center',
     padding: theme.spacing(1),
   },
-  kanbanContainer: {
-    width: "100%",
-    maxWidth: "1200px",
-    margin: "0 auto",
-  },
-  connectionTag: {
-    background: "green",
-    color: "#FFF",
-    marginRight: 1,
-    padding: 1,
+  button: {
+    background: '#10a110',
+    border: 'none',
+    padding: '10px',
+    color: 'white',
     fontWeight: 'bold',
-    borderRadius: 3,
-    fontSize: "0.6em",
+    borderRadius: '5px',
   },
-  lastMessageTime: {
-    justifySelf: "flex-end",
-    textAlign: "right",
-    position: "relative",
-    marginLeft: "auto",
-    color: theme.palette.text.secondary,
-  },
-  lastMessageTimeUnread: {
-    justifySelf: "flex-end",
-    textAlign: "right",
-    position: "relative",
-    color: theme.palette.success.main,
-    fontWeight: "bold",
-    marginLeft: "auto"
-  },
-  cardButton: {
-    marginRight: theme.spacing(1),
-    color: theme.palette.common.white,
-    backgroundColor: theme.palette.primary.main,
-    "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
-    },
-  },
-  dateInput: {
-    marginRight: theme.spacing(2),
+  bottomButtonVisibilityIcon: {
+    position: 'relative',
+    bottom: '-10px',
   },
 }));
 
 const Kanban = () => {
   const classes = useStyles();
-  const theme = useTheme(); // Obter o tema atual
   const history = useHistory();
-  const { user, socket } = useContext(AuthContext);
-  const [tags, setTags] = useState([]);
-  const [tickets, setTickets] = useState([]);
-  const [ticketNot, setTicketNot] = useState(0);
-  const [file, setFile] = useState({ lanes: [] });
-  const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const jsonString = user.queues.map(queue => queue.UserQueue.queueId);
+  const { user } = useContext(AuthContext);
+  const { profile, queues } = user;
+  const jsonString = user.queues.map((queue) => queue.UserQueue.queueId);
+
+  const [tags, setTags] = useState([]);
+  const [ticketList, setTicketList] = useState([]);
+  const [reloadData, setReloadData] = useState(false);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [oportunidadeModalOpen, setOportunidadeModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+
+
+  const [searchParams, setSearchParams] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedDate, setSelectedDate] = useState({
+    from: '',
+    until: '',
+  });
+
+  const { getPlanCompany } = usePlans();
+
+  useEffect(() => {
+    async function fetchData() {
+      const companyId = user?.companyId
+      const planConfigs = await getPlanCompany(undefined, companyId);
+      if (!planConfigs.plan.useKanban) {
+        toast.error(
+          'Você não possui acesso a este recurso! Faça um upgrade em sua assinatura ou contate o suporte!'
+        );
+        setTimeout(() => {
+          history.push(`/`);
+        }, 1000);
+      }
+    }
+    fetchData();
+  }, []);
 
   useEffect(() => {
     fetchTags();
-  }, [user]);
+  }, [selectedUsers, selectedDate, searchParams]);
 
   const fetchTags = async () => {
     try {
-      const response = await api.get("/tag/kanban/");
+      const response = await api.get('/tags/kanban');
       const fetchedTags = response.data.lista || [];
       setTags(fetchedTags);
-      fetchTickets();
+      await fetchTickets(jsonString);
     } catch (error) {
       console.log(error);
     }
   };
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (jsonString) => {
     try {
-      const { data } = await api.get("/ticket/kanban", {
+      const { data } = await api.get('/tickets/kanban', {
         params: {
+          showAll: profile === 'admin' || profile === 'supervisor',
+          searchParam: searchParams,
+          users: JSON.stringify(selectedUsers),
           queueIds: JSON.stringify(jsonString),
-          startDate: startDate,
-          endDate: endDate,
-        }
+          dateFrom: selectedDate.from,
+          dateUntil: selectedDate.until,
+        },
       });
-      setTickets(data.tickets);
+      setTicketList(data.tickets);
     } catch (err) {
       console.log(err);
-      setTickets([]);
+      setTicketList([]);
     }
+  };
+
+  const handleCardClick = useCallback(
+    (uuid) => {
+      history.push('/tickets/' + uuid);
+    },
+    [history]
+  );
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleOportunidadeModalOpen = () => {
+    setOportunidadeModalOpen(true);
+    if (typeof handleClose === "function") handleClose();
   };
 
   useEffect(() => {
-    const companyId = user.companyId;
-    const onAppMessage = (data) => {
-      if (data.action === "create" || data.action === "update" || data.action === "delete") {
-        fetchTickets();
-      }
-    };
-    socket.on(`company-${companyId}-ticket`, onAppMessage);
-    socket.on(`company-${companyId}-appMessage`, onAppMessage);
+    const { button } = classes;
+    const filteredTickets = ticketList.filter(
+      (ticket) => ticket.tags.length === 0
+    );
 
-    return () => {
-      socket.off(`company-${companyId}-ticket`, onAppMessage);
-      socket.off(`company-${companyId}-appMessage`, onAppMessage);
-    };
-  }, [socket, startDate, endDate]);
+    if (!filteredTickets) return;
 
-  const handleSearchClick = () => {
-    fetchTickets();
-  };
+    const lanes = tags.map((tag) => {
+      const filteredTickets = ticketList.filter((ticket) =>
+        ticket.tags.some((t) => t.id === tag.id)
+      );
 
-  const handleStartDateChange = (event) => {
-    setStartDate(event.target.value);
-  };
+      let somaTotalValorDoLead = 0;
 
-  const handleEndDateChange = (event) => {
-    setEndDate(event.target.value);
-  };
+      filteredTickets.forEach((ticketCC) => {
+        if (ticketCC.contact.extraInfo) {
+          ticketCC.contact.extraInfo.forEach((extraInfo) => {
+            if (extraInfo.name === 'Valor do Lead') {
+              somaTotalValorDoLead += parseFloat(extraInfo.value);
+            }
+          });
+        }
+      });
 
-  const IconChannel = (channel) => {
-    switch (channel) {
-      case "facebook":
-        return <Facebook style={{ color: "#3b5998", verticalAlign: "middle", fontSize: "16px" }} />;
-      case "instagram":
-        return <Instagram style={{ color: "#e1306c", verticalAlign: "middle", fontSize: "16px" }} />;
-      case "whatsapp":
-        return <WhatsApp style={{ color: "#25d366", verticalAlign: "middle", fontSize: "16px" }} />
-      default:
-        return "error";
-    }
-  };
-
-  const popularCards = (jsonString) => {
-    const filteredTickets = tickets.filter(ticket => ticket.tags.length === 0);
-
-    const lanes = [
-      {
-        id: "lane0",
-        title: i18n.t("tagsKanban.laneDefault"),
-        label: filteredTickets.length.toString(),
-        cards: filteredTickets.map(ticket => ({
+      return {
+        id: tag.id.toString(),
+        title: `${tag.name} ${filteredTickets.length} (${somaTotalValorDoLead})`,
+        label: tag.id.toString(),
+        cards: filteredTickets.map((ticket) => ({
           id: ticket.id.toString(),
-          label: "Ticket nº " + ticket.id.toString(),
+          label: `Ticket nº ${ticket.id}`,
           description: (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>{ticket.contact.number}</span>
-                <Typography
-                  className={Number(ticket.unreadMessages) > 0 ? classes.lastMessageTimeUnread : classes.lastMessageTime}
-                  component="span"
-                  variant="body2"
-                >
-                  {isSameDay(parseISO(ticket.updatedAt), new Date()) ? (
-                    <>{format(parseISO(ticket.updatedAt), "HH:mm")}</>
-                  ) : (
-                    <>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
-                  )}
-                </Typography>
-              </div>
-              <div style={{ textAlign: 'left' }}>{ticket.lastMessage || " "}</div>
-              <Button
-                className={`${classes.button} ${classes.cardButton}`}
-                onClick={() => {
-                  handleCardClick(ticket.uuid)
-                }}>
+              <p>{ticket.contact.number}</p>
+              <p>{ticket.lastMessage}</p>
+              <button
+                className={button}
+                onClick={() => handleCardClick(ticket.uuid)}
+              >
                 Ver Ticket
-              </Button>
-              <span style={{ marginRight: '8px' }} />
-              {ticket?.user && (<Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticket.user?.name.toUpperCase()}</Badge>)}
+              </button>
+              <p></p>
+              <p></p>
+              {ticket.oportunidadeId !== undefined &&
+                ticket.oportunidadeId !== null && (
+                  <button
+                      className={button}
+                      onClick={() => {
+                        setSelectedTicket(ticket);
+                        handleOportunidadeModalOpen();
+                      }}
+                    >
+                      Oportunidades
+                    </button>
+                )}
             </div>
           ),
-          title: <>
-            <Tooltip title={ticket.whatsapp?.name}>
-              {IconChannel(ticket.channel)}
-            </Tooltip> {ticket.contact.name}</>,
+          title: ticket.contact.name,
           draggable: true,
-          href: "/tickets/" + ticket.uuid,
+          href: '/tickets/' + ticket.uuid,
         })),
-      },
-      ...tags.map(tag => {
-        const filteredTickets = tickets.filter(ticket => {
-          const tagIds = ticket.tags.map(tag => tag.id);
-          return tagIds.includes(tag.id);
-        });
-
-        return {
-          id: tag.id.toString(),
-          title: tag.name,
-          label: filteredTickets?.length.toString(),
-          cards: filteredTickets.map(ticket => ({
-            id: ticket.id.toString(),
-            label: "Ticket nº " + ticket.id.toString(),
-            description: (
-              <div>
-                <p>
-                  {ticket.contact.number}
-                  <br />
-                  {ticket.lastMessage || " "}
-                </p>
-                <Button
-                  className={`${classes.button} ${classes.cardButton}`}
-                  onClick={() => {
-                    handleCardClick(ticket.uuid)
-                  }}>
-                  Ver Ticket
-                </Button>
-                <span style={{ marginRight: '8px' }} />
-                <p>
-                  {ticket?.user && (<Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticket.user?.name.toUpperCase()}</Badge>)}
-                </p>
-              </div>
-            ),
-            title: <>
-              <Tooltip title={ticket.whatsapp?.name}>
-                {IconChannel(ticket.channel)}
-              </Tooltip> {ticket.contact.name}
-            </>,
-            draggable: true,
-            href: "/tickets/" + ticket.uuid,
-          })),
-          style: { backgroundColor: tag.color, color: "white" }
-        };
-      }),
-    ];
+        style: { backgroundColor: tag.color, color: 'white' },
+      };
+    });
 
     setFile({ lanes });
-  };
-
-  const handleCardClick = (uuid) => {
-    history.push('/tickets/' + uuid);
-  };
-
-  useEffect(() => {
-    popularCards(jsonString);
-  }, [tags, tickets]);
+  }, [classes, handleCardClick, tags, ticketList]);
 
   const handleCardMove = async (cardId, sourceLaneId, targetLaneId) => {
     try {
@@ -256,70 +202,66 @@ const Kanban = () => {
       toast.success('Ticket Tag Removido!');
       await api.put(`/ticket-tags/${targetLaneId}/${sourceLaneId}`);
       toast.success('Ticket Tag Adicionado com Sucesso!');
-      await fetchTickets(jsonString);
-      popularCards(jsonString);
     } catch (err) {
       console.log(err);
     }
   };
 
-  const handleAddConnectionClick = () => {
-    history.push('/tagsKanban');
+  const onFiltered = (value) => {
+    const users = value.map((t) => t.id);
+    setSelectedUsers(users);
   };
 
+  const onChangeSearch = (searchValue) => {
+    setSearchParams(searchValue);
+  };
+
+  const handleSelectedDate = (value, range) => {
+    setSelectedDate({ ...selectedDate, [range]: value });
+  };
+
+  const [file, setFile] = useState({ lanes: [] });
+
   return (
-    <div className={classes.root}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', width: '100%', maxWidth: '1200px' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <TextField
-            label="Data de início"
-            type="date"
-            value={startDate}
-            onChange={handleStartDateChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            variant="outlined"
-            className={classes.dateInput}
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          paddingTop: 20,
+          paddingLeft: 20,
+        }}
+      >
+        <KanbanSearch searchParams={onChangeSearch} />
+        {(profile === 'admin' || profile === 'supervisor') && (
+          <UsersFilter onFiltered={onFiltered} />
+        )}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <DatePickerMoment
+            label={'De'}
+            getDate={(value) => handleSelectedDate(value, 'from')}
           />
-          <Box mx={1} />
-          <TextField
-            label="Data de fim"
-            type="date"
-            value={endDate}
-            onChange={handleEndDateChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            variant="outlined"
-            className={classes.dateInput}
+          <DatePickerMoment
+            label={'Até'}
+            getDate={(value) => handleSelectedDate(value, 'until')}
           />
-          <Box mx={1} />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSearchClick}
-          >
-            Buscar
-          </Button>
         </div>
-        <Can role={user.profile} perform="dashboard:view" yes={() => (
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleAddConnectionClick}
-          >
-            {'+ Adicionar colunas'}
-          </Button>
-        )} />
       </div>
-      <div className={classes.kanbanContainer}>
+      <div className={classes.root}>
         <Board
           data={file}
           onCardMoveAcrossLanes={handleCardMove}
           style={{ backgroundColor: 'rgba(252, 252, 252, 0.03)' }}
         />
       </div>
+      <RatingModal
+        open={oportunidadeModalOpen}
+        onClose={() => setOportunidadeModalOpen(false)}
+        ticketIform={selectedTicket?.contact?.name ? `${selectedTicket?.contact.name} # ${selectedTicket?.id}` : ""}
+        ticketIdLead={selectedTicket?.id}
+        ticket={selectedTicket}
+        aria-labelledby="form-dialog-title"
+      />
+
     </div>
   );
 };

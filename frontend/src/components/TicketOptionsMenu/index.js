@@ -25,6 +25,9 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	const [loading, setLoading] = useState(false);
 	const [acceptAudioMessage, setAcceptAudio] = useState(ticket.contact.acceptAudioMessage);
 
+    //console.log("aqui");
+    //console.log(ticket.contact.acceptAudioMessage);
+
 	useEffect(() => {
 		return () => {
 			isMounted.current = false;
@@ -60,12 +63,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 		try {
 			await api.put(`/tickets/${ticket.id}`, {
 				status: "closed",
-				userId: user?.id || null,
+				userId: user?.id,
 				sendFarewellMessage: false,
 			});
 
 			setLoading(false);
-
 			history.push("/tickets");
 		} catch (err) {
 			setLoading(false);

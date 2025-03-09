@@ -5,7 +5,7 @@ import { isArray, isString } from "lodash";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 
-export function TagsContainer({ contact }) {
+export function TagsContainer ({ ticket }) {
 
     const [tags, setTags] = useState([]);
     const [selecteds, setSelecteds] = useState([]);
@@ -20,14 +20,14 @@ export function TagsContainer({ contact }) {
     useEffect(() => {
         if (isMounted.current) {
             loadTags().then(() => {
-                if (Array.isArray(contact.tags)) {
-                    setSelecteds(contact.tags);
+                if (Array.isArray(ticket.tags)) {
+                    setSelecteds(ticket.tags);
                 } else {
                     setSelecteds([]);
                 }
             });
         }
-    }, [contact]);
+    }, [ticket]);
 
     const createTag = async (data) => {
         try {
@@ -40,9 +40,7 @@ export function TagsContainer({ contact }) {
 
     const loadTags = async () => {
         try {
-            const { data } = await api.get(`/tags/list`, 
-            {params: { kanban: 0}
-        });
+            const { data } = await api.get(`/tags/list`);
             setTags(data);
         } catch (err) {
             toastError(err);
@@ -63,12 +61,8 @@ export function TagsContainer({ contact }) {
         if (reason === 'create-option') {
             if (isArray(value)) {
                 for (let item of value) {
-                    if (item.length < 3) {
-                        toastError("Tag muito curta!");
-                        return;
-                    }
                     if (isString(item)) {
-                        const newTag = await createTag({ name: item, kanban: 0, color: getRandomHexColor() })
+                        const newTag = await createTag({ name: item, kanban: "0" })
                         optionsChanged.push(newTag);
                     } else {
                         optionsChanged.push(item);
@@ -80,23 +74,11 @@ export function TagsContainer({ contact }) {
             optionsChanged = value;
         }
         setSelecteds(optionsChanged);
-        await syncTags({ contactId: contact.id, tags: optionsChanged });
-    }
-
-    function getRandomHexColor() {
-        // Gerar valores aleatórios para os componentes de cor
-        const red = Math.floor(Math.random() * 256); // Valor entre 0 e 255
-        const green = Math.floor(Math.random() * 256); // Valor entre 0 e 255
-        const blue = Math.floor(Math.random() * 256); // Valor entre 0 e 255
-      
-        // Converter os componentes de cor em uma cor hexadecimal
-        const hexColor = `#${red.toString(16).padStart(2, '0')}${green.toString(16).padStart(2, '0')}${blue.toString(16).padStart(2, '0')}`;
-      
-        return hexColor;
+        await syncTags({ ticketId: ticket.id, tags: optionsChanged });
     }
 
     return (
-        <Paper style={{ padding: 2 }}>
+        <Paper style={{padding: 7, borderRadius: '0px'}}>
             <Autocomplete
                 multiple
                 size="small"
@@ -105,35 +87,31 @@ export function TagsContainer({ contact }) {
                 freeSolo
                 onChange={(e, v, r) => onChange(v, r)}
                 getOptionLabel={(option) => option.name}
-                renderTags={(value, getTagProps) =>
-                    value.map((option, index) => (
-                        <Chip
-                            variant="outlined"
-                            style={{
-                                backgroundColor: option.color || '#eee',
-                                color: "#FFF",
-                                marginRight: 1,
-                                padding: 1,
-                                fontWeight: 'bold',
-                                paddingLeft: 5,
-                                paddingRight: 5,
-                                borderRadius: 3,
-                                fontSize: "0.8em",
-                                whiteSpace: "nowrap"
-                            }}
-                            label={option.name}
-                            {...getTagProps({ index })}
-                            size="small"
-                        />
-                    ))
-                }
+renderTags={(value, getTagProps) =>
+  value.map((option, index) => {
+    if (option) {
+      return (
+        <Chip
+          variant="outlined"
+          style={{
+            backgroundColor: option.color || '#eee',
+            textShadow: '1px 1px 1px #000',
+            color: 'white',
+          }}
+          label={option.name}
+          {...getTagProps({ index })}
+          size="small"
+        />
+      );
+    }
+    return null;
+  })
+}
                 renderInput={(params) => (
-                    <TextField {...params} variant="outlined" placeholder="Tags" />
+                    <TextField {...params} variant="standard" placeholder="Tags" />
                 )}
                 PaperComponent={({ children }) => (
-                    <Paper
-                        style={{ width: 400, marginLeft: 6 }}
-                    >
+                    <Paper style={{width: 400, marginLeft: 12}}>
                         {children}
                     </Paper>
                 )}

@@ -10,12 +10,28 @@ const upload = multer(uploadConfig);
 const routes = express.Router();
 
 routes.get("/announcements/list", isAuth, AnnouncementController.findList);
+
 routes.get("/announcements", isAuth, AnnouncementController.index);
+
 routes.get("/announcements/:id", isAuth, AnnouncementController.show);
+
 routes.post("/announcements", isAuth, AnnouncementController.store);
-routes.put("/announcements/:id", isAuth,  upload.array("file"), AnnouncementController.update);
+
+routes.put("/announcements/:id", isAuth, AnnouncementController.update);
+
 routes.delete("/announcements/:id", isAuth, AnnouncementController.remove);
-routes.post("/announcements/:id/media-upload", isAuth, upload.array("file"), AnnouncementController.mediaUpload);
-routes.delete("/announcements/:id/media-upload", isAuth, AnnouncementController.deleteMedia);
+
+routes.post(
+  "/announcements/:id/media-upload",
+  isAuth,
+  upload.array("file"),
+  AnnouncementController.mediaUpload
+);
+
+routes.delete(
+  "/announcements/:id/media-upload",
+  isAuth,
+  AnnouncementController.deleteMedia
+);
 
 export default routes;

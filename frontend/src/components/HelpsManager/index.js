@@ -19,7 +19,6 @@ import { Edit as EditIcon } from "@material-ui/icons";
 
 import { toast } from "react-toastify";
 import useHelps from "../../hooks/useHelps";
-import { i18n } from "../../translate/i18n";
 
 
 const useStyles = makeStyles(theme => ({
@@ -101,7 +100,7 @@ export function HelpManagerForm (props) {
                         <Grid xs={12} sm={6} md={3} item>
                             <Field
                                 as={TextField}
-                                label={i18n.t("helps.settings.codeVideo")}
+                                label="Código do Vídeo"
                                 name="video"
                                 variant="outlined"
                                 className={classes.fullWidth}
@@ -111,7 +110,7 @@ export function HelpManagerForm (props) {
                         <Grid xs={12} sm={12} md={6} item>
                             <Field
                                 as={TextField}
-                                label={i18n.t("helps.settings.description")}
+                                label="Descrição"
                                 name="description"
                                 variant="outlined"
                                 className={classes.fullWidth}
@@ -120,19 +119,19 @@ export function HelpManagerForm (props) {
                         </Grid>
                         <Grid sm={3} md={1} item>
                             <ButtonWithSpinner className={classes.fullWidth} loading={loading} onClick={() => onCancel()} variant="contained">
-                            {i18n.t("helps.settings.clear")}
+                                Limpar
                             </ButtonWithSpinner>
                         </Grid>
                         { record.id !== undefined ? (
                             <Grid sm={3} md={1} item>
                                 <ButtonWithSpinner className={classes.fullWidth} loading={loading} onClick={() => onDelete(record)} variant="contained" color="secondary">
-                                {i18n.t("helps.settings.delete")}
+                                    Excluir
                                 </ButtonWithSpinner>
                             </Grid>
                         ) : null}
                         <Grid sm={3} md={1} item>
                             <ButtonWithSpinner className={classes.fullWidth} loading={loading} type="submit" variant="contained" color="primary">
-                            {i18n.t("helps.settings.save")}
+                                Salvar
                             </ButtonWithSpinner>
                         </Grid>
                     </Grid>
@@ -153,8 +152,8 @@ export function HelpsManagerGrid (props) {
                 <TableRow>
                     <TableCell align="center" style={{width: '1%'}}>#</TableCell>
                     <TableCell align="left">Título</TableCell>
-                    <TableCell align="left">{i18n.t("helps.settings.description")}</TableCell>
-                    <TableCell align="left">Video</TableCell>
+                    <TableCell align="left">Descrição</TableCell>
+                    <TableCell align="left">Vídeo</TableCell>
                 </TableRow>
                 </TableHead>
                 <TableBody>
@@ -162,7 +161,7 @@ export function HelpsManagerGrid (props) {
                     <TableRow key={row.id}>
                         <TableCell align="center" style={{width: '1%'}}>
                             <IconButton onClick={() => onSelect(row)} aria-label="delete">
-                                <EditIcon />
+                                <EditIcon color="secondary" />
                             </IconButton>
                         </TableCell>
                         <TableCell align="left">{row.title || '-'}</TableCell>

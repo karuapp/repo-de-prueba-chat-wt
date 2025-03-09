@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, useContext, useCallback } from "react";
+import React, { useState, useEffect, useReducer, useContext, useCallback  } from "react";
 import { toast } from "react-toastify";
 
 import { makeStyles } from "@material-ui/core/styles";
@@ -30,8 +30,9 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { Grid } from "@material-ui/core";
 import { isArray } from "lodash";
-// import { SocketContext } from "../../context/Socket/SocketContext";
+import { socketConnection } from "../../services/socket";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 
 const reducer = (state, action) => {
@@ -107,9 +108,8 @@ const Quickemessages = () => {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
   const [quickemessages, dispatch] = useReducer(reducer, []);
-  //   const socketManager = useContext(SocketContext);
-  const { user, socket } = useContext(AuthContext);
-
+  const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
   const { profile } = user;
 
   useEffect(() => {
@@ -127,33 +127,31 @@ const Quickemessages = () => {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
-    const companyId = user.companyId;
-    // const socket = socketManager.GetSocket();
+    const companyId = localStorage.getItem("companyId");
+    const socket = socketManager.GetSocket(companyId);
 
-    const onQuickMessageEvent = (data) => {
-      if (data.action === "update" || data.action === "create") {
-        dispatch({ type: "UPDATE_QUICKMESSAGES", payload: data.record });
-      }
-      if (data.action === "delete") {
-        dispatch({ type: "DELETE_QUICKMESSAGE", payload: +data.id });
-      }
-    };
-    socket.on(`company-${companyId}-quickemessage`, onQuickMessageEvent);
-
+      socket.on(`company-quickemessage`, (data) => {
+        if (data.action === "update" || data.action === "create") {
+          dispatch({ type: "UPDATE_QUICKMESSAGES", payload: data.record });
+        }
+        if (data.action === "delete") {
+          dispatch({ type: "DELETE_QUICKMESSAGE", payload: +data.id });
+        }
+      });
     return () => {
-      socket.off(`company-${companyId}-quickemessage`, onQuickMessageEvent);
+      socket.disconnect()
     };
-  }, [socket]);
+  }, []);
 
   const fetchQuickemessages = async () => {
     try {
-      const companyId = user.companyId;
+      const companyId = localStorage.getItem("companyId");
       //const searchParam = ({ companyId, userId: user.id });
-      const { data } = await api.get("/quick-messages", {
-        params: { searchParam, pageNumber },
+      const { data } = await api.get("/quick-messages/list", {
+        params: { companyId, userId: user.id },
       });
-
-      dispatch({ type: "LOAD_QUICKMESSAGES", payload: data.records });
+      //console.log(data);
+      dispatch({ type: "LOAD_QUICKMESSAGES", payload: data });
       setHasMore(data.hasMore);
       setLoading(false);
     } catch (err) {
@@ -169,7 +167,7 @@ const Quickemessages = () => {
   const handleCloseQuickMessageDialog = () => {
     setSelectedQuickemessage(null);
     setQuickMessageDialogOpen(false);
-    //window.location.reload();
+  	//window.location.reload();
     fetchQuickemessages();
   };
 
@@ -195,7 +193,7 @@ const Quickemessages = () => {
     setPageNumber(1);
     fetchQuickemessages();
     dispatch({ type: "RESET" });
-
+        
   };
 
   const loadMore = () => {
@@ -213,12 +211,12 @@ const Quickemessages = () => {
   return (
     <MainContainer>
       <ConfirmationModal
-        title={deletingQuickemessage && `${i18n.t("quickMessages.confirmationModal.deleteTitle")} ${deletingQuickemessage.shortcode}?`}
+        title={deletingQuickemessage && `${i18n.t("quickemessages.confirmationModal.deleteTitle")} ${deletingQuickemessage.shortcode}?`}
         open={confirmModalOpen}
         onClose={setConfirmModalOpen}
         onConfirm={() => handleDeleteQuickemessage(deletingQuickemessage.id)}
       >
-        {i18n.t("quickMessages.confirmationModal.deleteMessage")}
+        {i18n.t("quickemessages.confirmationModal.deleteMessage")}
       </ConfirmationModal>
       <QuickMessageDialog
         resetPagination={() => {
@@ -233,14 +231,14 @@ const Quickemessages = () => {
       <MainHeader>
         <Grid style={{ width: "99.6%" }} container>
           <Grid xs={12} sm={8} item>
-            <Title>{i18n.t("quickMessages.title")}</Title>
+            <Title>{i18n.t("quickemessages.title")}</Title>
           </Grid>
           <Grid xs={12} sm={4} item>
             <Grid spacing={2} container>
               <Grid xs={6} sm={6} item>
                 <TextField
                   fullWidth
-                  placeholder={i18n.t("quickMessages.searchPlaceholder")}
+                  placeholder={i18n.t("quickemessages.searchPlaceholder")}
                   type="search"
                   value={searchParam}
                   onChange={handleSearch}
@@ -260,7 +258,7 @@ const Quickemessages = () => {
                   onClick={handleOpenQuickMessageDialog}
                   color="primary"
                 >
-                  {i18n.t("quickMessages.buttons.add")}
+                  {i18n.t("quickemessages.buttons.add")}
                 </Button>
               </Grid>
             </Grid>
@@ -276,17 +274,17 @@ const Quickemessages = () => {
           <TableHead>
             <TableRow>
               <TableCell align="center">
-                {i18n.t("quickMessages.table.shortcode")}
+                {i18n.t("quickemessages.table.shortcode")}
               </TableCell>
-
+              
               <TableCell align="center">
-                {i18n.t("quickMessages.table.mediaName")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("quickMessages.table.status")}
+                {i18n.t("quickemessages.table.mediaName")}
               </TableCell>
               <TableCell align="center">
-                {i18n.t("quickMessages.table.actions")}
+                {i18n.t("quickemessages.table.status")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("quickemessages.table.actions")}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -295,35 +293,40 @@ const Quickemessages = () => {
               {quickemessages.map((quickemessage) => (
                 <TableRow key={quickemessage.id}>
                   <TableCell align="center">{quickemessage.shortcode}</TableCell>
-
+                  
                   <TableCell align="center">
-                    {quickemessage.mediaName ?? i18n.t("quickMessages.noAttachment")}
+                    {quickemessage.mediaName ?? "Sem anexo"}
                   </TableCell>
                   <TableCell align="center">
-                    {quickemessage.geral === true ? (
-                      <CheckCircleIcon style={{ color: 'green' }} />
-                    ) : (
-                      ''
-                    )}
-                  </TableCell>
+  					{quickemessage.geral === true ? (
+    					<CheckCircleIcon style={{ color: 'green' }} />
+  						) : (
+    					''
+  						)}
+				  </TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditQuickemessage(quickemessage)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+{(profile === "admin" || profile === "supervisor" ||
+  (profile === "user" && !quickemessage.geral)) && (
+  <IconButton
+    size="small"
+    onClick={() => handleEditQuickemessage(quickemessage)}
+  >
+    <EditIcon />
+  </IconButton>
+)}
 
-
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setConfirmModalOpen(true);
-                        setDeletingQuickemessage(quickemessage);
-                      }}
-                    >
-                      <DeleteOutlineIcon />
-                    </IconButton>
+{(profile === "admin" || profile === "supervisor" ||
+  (profile === "user" && !quickemessage.geral)) && (
+  <IconButton
+    size="small"
+    onClick={(e) => {
+      setConfirmModalOpen(true);
+      setDeletingQuickemessage(quickemessage);
+    }}
+  >
+    <DeleteOutlineIcon />
+  </IconButton>
+)}
                   </TableCell>
                 </TableRow>
               ))}

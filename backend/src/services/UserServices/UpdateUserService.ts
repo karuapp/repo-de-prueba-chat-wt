@@ -1,6 +1,7 @@
 import * as Yup from "yup";
 
 import AppError from "../../errors/AppError";
+import { SerializeUser } from "../../helpers/SerializeUser";
 import ShowUserService from "./ShowUserService";
 import Company from "../../models/Company";
 import User from "../../models/User";
@@ -11,24 +12,13 @@ interface UserData {
   name?: string;
   profile?: string;
   companyId?: number;
+  SuperIs?: boolean;
   queueIds?: number[];
-  startWork?: string;
-  endWork?: string;
-  farewellMessage?: string;
   whatsappId?: number;
-  allTicket?: string;
-  defaultTheme?: string;
-  defaultMenu?: string;
-  allowGroup?: boolean;
-  allHistoric?: string;
-  allUserChat?: string;
-  userClosePendingTicket?: string;
-  showDashboard?: string;
-  defaultTicketsManagerWidth?: number;
-  allowRealTime?: string;
-  allowConnections?: string;
-  profileImage?: string;
+  farewellMessage?: string;
+  wbotIds?: number[];
 }
+
 
 interface Request {
   userData: UserData;
@@ -50,7 +40,7 @@ const UpdateUserService = async ({
   companyId,
   requestUserId
 }: Request): Promise<Response | undefined> => {
-  const user = await ShowUserService(userId, companyId);
+  const user = await ShowUserService(userId);
 
   const requestUser = await User.findByPk(requestUserId);
 
@@ -60,37 +50,15 @@ const UpdateUserService = async ({
 
   const schema = Yup.object().shape({
     name: Yup.string().min(2),
-    allHistoric: Yup.string(),
     email: Yup.string().email(),
     profile: Yup.string(),
     password: Yup.string()
   });
 
-  const oldUserEmail = user.email;
-  
-  const {
-    email,
-    password,
-    profile,
-    name,
-    queueIds = [],
-    startWork,
-    endWork,
-    farewellMessage,
-    whatsappId,
-    allTicket,
-    defaultTheme,
-    defaultMenu,
-    allowGroup,
-    allHistoric,
-    allUserChat,
-    userClosePendingTicket,
-    showDashboard,
-    allowConnections,
-    defaultTicketsManagerWidth = 550,
-    allowRealTime,
-    profileImage
-  } = userData;
+  const { email, password, profile, name, queueIds = [], whatsappId, SuperIs, farewellMessage, wbotIds = [] } = userData;
+
+  //console.log("SUPER VALUE:");
+  //console.log(SuperIs);
 
   try {
     await schema.validate({ email, password, profile, name });
@@ -98,42 +66,47 @@ const UpdateUserService = async ({
     throw new AppError(err.message);
   }
 
-  await user.update({
-    email,
-    password,
-    profile,
-    name,
-    startWork,
-    endWork,
-    farewellMessage,
-    whatsappId: whatsappId || null,
-    allTicket,
-    defaultTheme,
-    defaultMenu,
-    allowGroup,
-    allHistoric,
-    allUserChat,
-    userClosePendingTicket,
-    showDashboard,
-    defaultTicketsManagerWidth,
-    allowRealTime,
-    profileImage,
-    allowConnections
-  });
+  let updatedProfile = profile; // Initialize a new variable to store the updated value
+
+
+  if (SuperIs == true) {
+    updatedProfile = "admin"; // Update the new variable instead of the constant
+  }
+
+  if (user.id === 1) {
+
+    await user.update({
+      email,
+      password,
+      profile: "admin",
+      name,
+      whatsappId: whatsappId ? whatsappId : null,
+      super: true,
+      farewellMessage
+    });
+
+  } else {
+
+    await user.update({
+      email,
+      password,
+      profile: updatedProfile,
+      name,
+      whatsappId: whatsappId ? whatsappId : null,
+      super: SuperIs ? SuperIs : false,
+      farewellMessage
+    });
+
+  }
+
 
   await user.$set("queues", queueIds);
+  await user.$set("wbots", wbotIds);
 
   await user.reload();
 
   const company = await Company.findByPk(user.companyId);
 
-  if (company.email === oldUserEmail) {
-    await company.update({
-      email,
-      password
-    })
-  }
-  
   const serializedUser = {
     id: user.id,
     name: user.name,
@@ -141,23 +114,14 @@ const UpdateUserService = async ({
     profile: user.profile,
     companyId: user.companyId,
     company,
+    super: user.super,
     queues: user.queues,
-    startWork: user.startWork,
-    endWork: user.endWork,
+    whatsapp: user.whatsapp,
     greetingMessage: user.farewellMessage,
-    allTicket: user.allTicket,
-    defaultMenu: user.defaultMenu,
-    defaultTheme: user.defaultTheme,
-    allowGroup: user.allowGroup,
-    allHistoric: user.allHistoric,
-    userClosePendingTicket: user.userClosePendingTicket,
-    showDashboard: user.showDashboard,
-    defaultTicketsManagerWidth: user.defaultTicketsManagerWidth,
-    allowRealTime: user.allowRealTime,
-    allowConnections: user.allowConnections,
-    profileImage: user.profileImage
+    wbots: user.wbots
   };
 
+  //console.log(serializedUser);
   return serializedUser;
 };
 

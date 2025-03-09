@@ -1,19 +1,14 @@
 import AppError from "../../errors/AppError";
-import CompaniesSettings from "../../models/CompaniesSettings";
 import Contact from "../../models/Contact";
 import ContactCustomField from "../../models/ContactCustomField";
-import logger from "../../utils/logger";
-import ContactWallet from "../../models/ContactWallet";
+
+import * as fs from 'fs';
+import path from 'path';
+import { cwd } from "process";
 
 interface ExtraInfo extends ContactCustomField {
   name: string;
   value: string;
-}
-
-interface Wallet {
-  walletId: number | string;
-  contactId: number | string;
-  companyId: number | string;
 }
 
 interface Request {
@@ -25,8 +20,6 @@ interface Request {
   active?: boolean;
   companyId: number;
   extraInfo?: ExtraInfo[];
-  remoteJid?: string;
-  wallets?: null | number[] | string[];
 }
 
 const CreateContactService = async ({
@@ -36,76 +29,80 @@ const CreateContactService = async ({
   acceptAudioMessage,
   active,
   companyId,
-  extraInfo = [],
-  remoteJid = "",
-  wallets
+  extraInfo = []
 }: Request): Promise<Contact> => {
 
-  const settings = await CompaniesSettings.findOne({
-    where: { companyId }
+  //  const newArrayToAdd = [
+  //   { name: 'Código', value: '0' },
+  //   { name: 'Valor do Lead', value: '0' },
+  //   { name: 'CEP', value: '0' },
+  //   { name: 'Endereço', value: '0' },
+  //   { name: 'Número', value: '0' },
+  //   { name: 'Complemento', value: '0' },
+  //   { name: 'Bairro', value: '0' },
+  //   { name: 'Cidade', value: '0' },
+  //   { name: 'Nascimento', value: '0' },
+  //   { name: 'CPF', value: '0' },
+  //   { name: 'RG', value: '0' },
+  //   { name: 'Passaporte', value: '0' },
+  //   { name: 'Validade Passaporte', value: '0' },
+  //   { name: 'Observações', value: '0' },
+  //   { name: 'Vendedor', value: '0' },
+  //   { name: 'Inscrição Municipal', value: '0' },
+  //   { name: 'Sexo', value: '0' },
+  //   { name: 'Estrangeiro', value: '0' }
+  // ];
+
+  const newArrayToAdd = [
+    { name: 'Código Interno', value: '0' },
+    { name: 'Valor do Lead', value: '0' },
+    { name: 'Sexo', value: '0' },
+    { name: 'Nascimento', value: '0' },
+    { name: 'CPF', value: '0' },
+    { name: 'RG', value: '0' },
+    { name: 'CNPJ', value: '0' },
+    { name: 'CEP', value: '0' },
+    { name: 'Endereço', value: '0' },
+    { name: 'Número', value: '0' },
+    { name: 'Complemento', value: '0' },
+    { name: 'Bairro', value: '0' },
+    { name: 'Cidade', value: '0' },
+    { name: 'Vendedor', value: '0' }
+  ];
+
+  const updatedExtraInfo = [...extraInfo, ...newArrayToAdd];
+
+  // const clientExtraFieldsPath = path.join(cwd(), "ClientFields.json");
+
+  // const clientExtraFieldsData = fs.readFileSync(clientExtraFieldsPath, "utf-8");
+
+  // const updatedExtraInfo = [...extraInfo, ...clientExtraFieldsData];
+
+
+  const numberExists = await Contact.findOne({
+    where: { number, companyId }
   });
 
-  const acceptAudioMessageContact = settings?.acceptAudioMessageContact === 'enabled' ? true : false;
-
-  try {
-    const [contact, created] = await Contact.findOrCreate({
-      where: { number, companyId },
-      defaults: { 
-        name, 
-        email, 
-        acceptAudioMessage: acceptAudioMessageContact,
-        active, 
-        remoteJid, 
-        companyId 
-      }
-    });
-
-    if (!created) {
-      logger.warn(`Contato com número ${number} já existe para a empresa ${companyId}.`);
-      return contact;
-    }
-
-    contact.acceptAudioMessage = acceptAudioMessageContact;
-    await contact.save();
-
-    await contact.reload({
-      include: [
-        {
-          association: "extraInfo",
-        },
-        {
-          association: "wallets",
-          attributes: ["id", "name"]
-        }
-      ]
-    });
-
-    if (wallets) {
-      await ContactWallet.destroy({
-        where: {
-          companyId,
-          contactId: contact.id
-        }
-      });
-
-      const contactWallets: Wallet[] = [];
-      wallets.forEach((wallet: any) => {
-        contactWallets.push({
-          walletId: wallet.id ? wallet.id : wallet,
-          contactId: contact.id,
-          companyId
-        });
-      });
-
-      await ContactWallet.bulkCreate(contactWallets);
-    }
-
-    return contact;
-
-  } catch (error) {
-    logger.error("Erro ao criar ou atualizar o contato", error);
-    throw error;
+  if (numberExists) {
+    throw new AppError("ERR_DUPLICATED_CONTACT");
   }
+
+  const contact = await Contact.create(
+    {
+      name,
+      number,
+      email,
+      acceptAudioMessage,
+      active,
+      extraInfo: updatedExtraInfo,
+      companyId
+    },
+    {
+      include: ["extraInfo"]
+    }
+  );
+
+  return contact;
 };
 
 export default CreateContactService;

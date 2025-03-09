@@ -114,3 +114,4 @@ export interface Store {
   writeToFile: (path: string) => void;
   readFromFile: (path: string) => void;
 }
+//console.log(groupMetadata);

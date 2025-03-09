@@ -11,9 +11,7 @@ import {
   AutoIncrement,
   Default,
   BeforeCreate,
-  BelongsToMany,
-  AllowNull,
-  DataType
+  BelongsToMany
 } from "sequelize-typescript";
 import { v4 as uuidv4 } from "uuid";
 
@@ -23,11 +21,9 @@ import Queue from "./Queue";
 import User from "./User";
 import Whatsapp from "./Whatsapp";
 import Company from "./Company";
+import QueueOption from "./QueueOption";
 import Tag from "./Tag";
 import TicketTag from "./TicketTag";
-import QueueIntegrations from "./QueueIntegrations";
-import { format } from "date-fns";
-
 
 @Table
 class Ticket extends Model<Ticket> {
@@ -43,28 +39,13 @@ class Ticket extends Model<Ticket> {
   unreadMessages: number;
 
   @Column
-  flowWebhook: boolean;
-
-  @Column
-  lastFlowId: string;
-
-  @Column
-  hashFlowId: string;
-
-  @Column
-  flowStopped: string;
-
-  @Column(DataType.JSON)
-  dataWebhook: {} | null;;
-
-  @Column
   lastMessage: string;
 
   @Default(false)
   @Column
   isGroup: boolean;
 
-  @Column
+  @CreatedAt
   createdAt: Date;
 
   @UpdatedAt
@@ -98,9 +79,19 @@ class Ticket extends Model<Ticket> {
   @BelongsTo(() => Queue)
   queue: Queue;
 
-  @Default(false)
   @Column
-  isBot: boolean;
+  chatbot: boolean;
+  
+  @Default("whatsapp")
+  @Column
+  channel: string;
+
+  @ForeignKey(() => QueueOption)
+  @Column
+  queueOptionId: number;
+
+  @BelongsTo(() => QueueOption)
+  queueOption: QueueOption;
 
   @HasMany(() => Message)
   messages: Message[];
@@ -122,69 +113,23 @@ class Ticket extends Model<Ticket> {
   @Column
   uuid: string;
 
-  @Default("whatsapp")
-  @Column
-  channel: string;
-
-  @AllowNull(false)
-  @Default(0)
-  @Column
-  amountUsedBotQueues: number;
-
-  @AllowNull(false)
-  @Default(0)
-  @Column
-  amountUsedBotQueuesNPS: number;
-
   @BeforeCreate
   static setUUID(ticket: Ticket) {
     ticket.uuid = uuidv4();
   }
-
-  @Default(false)
+  
   @Column
-  fromMe: boolean;
-
-  @Default(false)
-  @Column
-  sendInactiveMessage: boolean;
+  sessiontypebot: string;
 
   @Column
-  lgpdSendMessageAt: Date;
+  startChatTime: Date;
+  
+  @Column
+  oportunidadeId: number;
 
   @Column
-  lgpdAcceptedAt: Date;
+  assignedUsers: string;
 
-  @Column
-  imported: Date;
-
-  @Default(false)
-  @Column
-  isOutOfHour: boolean;
-
-  @Default(false)
-  @Column
-  useIntegration: boolean;
-
-  @ForeignKey(() => QueueIntegrations)
-  @Column
-  integrationId: number;
-
-  @BelongsTo(() => QueueIntegrations)
-  queueIntegration: QueueIntegrations;
-
-  @Column
-  isActiveDemand: boolean;
-
-  @Column
-  typebotSessionId: string;
-
-  @Default(false)
-  @Column
-  typebotStatus: boolean
-
-  @Column
-  typebotSessionTime: Date
 }
 
 export default Ticket;

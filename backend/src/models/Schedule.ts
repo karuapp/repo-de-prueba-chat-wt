@@ -8,15 +8,13 @@ import {
   AutoIncrement,
   DataType,
   BelongsTo,
-  ForeignKey,
-  Default
+  ForeignKey
 } from "sequelize-typescript";
 import Company from "./Company";
 import Contact from "./Contact";
 import Ticket from "./Ticket";
 import User from "./User";
-import Whatsapp from "./Whatsapp";
-import Queue from "./Queue";
+
 
 @Table
 class Schedule extends Model<Schedule> {
@@ -59,6 +57,15 @@ class Schedule extends Model<Schedule> {
   @UpdatedAt
   updatedAt: Date;
 
+  @Column
+  geral: boolean;
+
+  @Column
+  queueId: number;
+
+  @Column
+  whatsappId: number;
+
   @BelongsTo(() => Contact, "contactId")
   contact: Contact;
 
@@ -71,57 +78,21 @@ class Schedule extends Model<Schedule> {
   @BelongsTo(() => Company)
   company: Company;
 
-  @ForeignKey(() => User)
-  @Column
-  ticketUserId: number;
-
-  @BelongsTo(() => User, "ticketUserId")
-  ticketUser: User;
-
-  @ForeignKey(() => Queue)
-  @Column
-  queueId: number;
-
-  @BelongsTo(() => Queue)
-  queue: Queue;
-
-  @Column({ defaultValue: "closed" })
-  statusTicket: string;
-
-  @Column({ defaultValue: "disabled" })
-  openTicket: string;
-
   @Column
   mediaPath: string;
-
+  
   @Column
   mediaName: string;
 
-  @ForeignKey(() => Whatsapp)
   @Column
-  whatsappId: number;
-
-  @BelongsTo(() => Whatsapp)
-  whatsapp: Whatsapp;
+  repeatEvery: string;
 
   @Column
-  intervalo: number;
+  repeatCount: string;
 
   @Column
-  valorIntervalo: number;
+  selectDaysRecorrenci: string
 
-  @Column
-  enviarQuantasVezes: number;
-
-  @Column
-  tipoDias: number;
-
-  @Column
-  contadorEnvio: number;
-
-  @Default(false)
-  @Column
-  assinar: boolean;
 }
 
 export default Schedule;

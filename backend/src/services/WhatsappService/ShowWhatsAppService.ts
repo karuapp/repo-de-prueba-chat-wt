@@ -1,10 +1,8 @@
 import Whatsapp from "../../models/Whatsapp";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
-import Chatbot from "../../models/Chatbot";
+import QueueOption from "../../models/QueueOption";
 import { FindOptions } from "sequelize/types";
-import Prompt from "../../models/Prompt";
-import { FlowBuilderModel } from "../../models/FlowBuilder";
 
 const ShowWhatsAppService = async (
   id: string | number,
@@ -14,29 +12,14 @@ const ShowWhatsAppService = async (
   const findOptions: FindOptions = {
     include: [
       {
-        model: FlowBuilderModel,
-      },
-      {
         model: Queue,
         as: "queues",
-        attributes: ["id", "name", "color", "greetingMessage", "integrationId", "fileListId", "closeTicket"],
-        include: [
-          {
-            model: Chatbot,
-            as: "chatbots",
-            attributes: ["id", "name", "greetingMessage", "closeTicket"]
-          }
-        ]
-      },
-      {
-        model: Prompt,
-        as: "prompt",
+        attributes: ["id", "name", "color", "greetingMessage","typeChatbot","workspaceTypebot","typebotId","publicId","resetChatbotMsg"],
+        include: [{ model: QueueOption, as: "options" }]
       }
     ],
-    order: [
-      ["queues", "orderQueue", "ASC"],
-      ["queues", "chatbots", "id", "ASC"]
-    ]
+    //order: [["queues", "name", "ASC"]]
+    order: [["queues", "prioridade", "ASC"]]
   };
 
   if (session !== undefined && session == 0) {

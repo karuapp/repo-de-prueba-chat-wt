@@ -17,7 +17,7 @@ const useStyles = makeStyles(theme => ({
 	chip: {
 		margin: 2,
 	},
-})); 
+}));
 
 const QueueSelect = ({ selectedQueueIds, onChange }) => {
 	const classes = useStyles();
@@ -39,7 +39,7 @@ const QueueSelect = ({ selectedQueueIds, onChange }) => {
 	};
 
 	return (
-		<div style={{ marginTop: 6 }}>
+		<div style={{ marginTop: 1 }}>
 			<FormControl fullWidth margin="dense" variant="outlined">
 				<InputLabel>{i18n.t("queueSelect.inputLabel")}</InputLabel>
 				<Select
@@ -75,7 +75,7 @@ const QueueSelect = ({ selectedQueueIds, onChange }) => {
 								})}
 						</div>
 					)}
-				>					
+				>
 					{queues.map(queue => (
 						<MenuItem key={queue.id} value={queue.id}>
 							{queue.name}

@@ -3,7 +3,6 @@ import Autocomplete from "@material-ui/lab/Autocomplete";
 import React, { useEffect, useState } from "react";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
-import { i18n } from "../../translate/i18n";
 
 export function WhatsappsFilter({ onFiltered, initialWhatsapps }) {
   const [whatsapps, setWhatsapps] = useState([]);
@@ -77,7 +76,7 @@ export function WhatsappsFilter({ onFiltered, initialWhatsapps }) {
           <TextField
             {...params}
             variant="outlined"
-            placeholder={i18n.t("tickets.search.filterConections")}
+            placeholder="Filtro por Conexão"
           />
         )}
       />

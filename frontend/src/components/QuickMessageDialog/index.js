@@ -21,8 +21,6 @@ import { head } from "lodash";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import MessageVariablesPicker from "../MessageVariablesPicker";
-import ButtonWithSpinner from "../ButtonWithSpinner";
 
 import {
   FormControl,
@@ -32,7 +30,6 @@ import {
   Select,
 } from "@material-ui/core";
 import ConfirmationModal from "../ConfirmationModal";
-import path from "path-browserify";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -70,15 +67,13 @@ const useStyles = makeStyles((theme) => ({
 
 const QuickeMessageSchema = Yup.object().shape({
   shortcode: Yup.string().required("Obrigatório"),
-  //   message: Yup.string().required("Obrigatório"),
+  message: Yup.string().required("Obrigatório"),
 });
 
 const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
-
-  const messageInputRef = useRef();
-
+  const { profile } = user;
   const initialState = {
     shortcode: "",
     message: "",
@@ -89,7 +84,11 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [quickemessage, setQuickemessage] = useState(initialState);
   const [attachment, setAttachment] = useState(null);
+  const [showCaption, setShowCaption] = useState(false);
+
   const attachmentFile = useRef(null);
+
+  
 
   useEffect(() => {
     try {
@@ -97,7 +96,6 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
         if (!quickemessageId) return;
 
         const { data } = await api.get(`/quick-messages/${quickemessageId}`);
-
         setQuickemessage((prevState) => {
           return { ...prevState, ...data };
         });
@@ -117,19 +115,17 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
     const file = head(e.target.files);
     if (file) {
       setAttachment(file);
+      setShowCaption(true);
     }
   };
 
   const handleSaveQuickeMessage = async (values) => {
-
-    const quickemessageData = { ...values, isMedia: true, mediaPath: attachment ? String(attachment.name).replace(/ /g, "_") : values.mediaPath ? path.basename(values.mediaPath).replace(/ /g, "_") : null };
-
+    const quickemessageData = { ...values };
     try {
       if (quickemessageId) {
         await api.put(`/quick-messages/${quickemessageId}`, quickemessageData);
         if (attachment != null) {
           const formData = new FormData();
-          formData.append("typeArch", "quickMessage");
           formData.append("file", attachment);
           await api.post(
             `/quick-messages/${quickemessageId}/media-upload`,
@@ -140,15 +136,14 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
         const { data } = await api.post("/quick-messages", quickemessageData);
         if (attachment != null) {
           const formData = new FormData();
-          formData.append("typeArch", "quickMessage");
           formData.append("file", attachment);
           await api.post(`/quick-messages/${data.id}/media-upload`, formData);
         }
       }
-      toast.success(i18n.t("quickMessages.toasts.success"));
+      toast.success(i18n.t("quickemessage.toasts.success"));
       if (typeof reload == "function") {
-        console.log(reload);
-        console.log("0");
+        // console.log(reload);
+        // console.log("0");
         reload();
       }
     } catch (err) {
@@ -169,36 +164,24 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
         ...prev,
         mediaPath: null,
       }));
-      toast.success(i18n.t("quickMessages.toasts.deleted"));
+      toast.success(i18n.t("quickemessage.toasts.deleted"));
       if (typeof reload == "function") {
-        console.log(reload);
-        console.log("1");
+        // console.log(reload);
+        // console.log("1");
         reload();
       }
     }
   };
 
-  const handleClickMsgVar = async (msgVar, setValueFunc) => {
-    const el = messageInputRef.current;
-    const firstHalfText = el.value.substring(0, el.selectionStart);
-    const secondHalfText = el.value.substring(el.selectionEnd);
-    const newCursorPos = el.selectionStart + msgVar.length;
-
-    setValueFunc("message", `${firstHalfText}${msgVar}${secondHalfText}`);
-
-    await new Promise(r => setTimeout(r, 100));
-    messageInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
-  };
-
   return (
     <div className={classes.root}>
       <ConfirmationModal
-        title={i18n.t("quickMessages.confirmationModal.deleteTitle")}
+        title={i18n.t("quickemessage.confirmationModal.deleteTitle")}
         open={confirmationOpen}
         onClose={() => setConfirmationOpen(false)}
         onConfirm={deleteMedia}
       >
-        {i18n.t("quickMessages.confirmationModal.deleteMessage")}
+        {i18n.t("quickemessage.confirmationModal.deleteMessage")}
       </ConfirmationModal>
       <Dialog
         open={open}
@@ -209,13 +192,13 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
       >
         <DialogTitle id="form-dialog-title">
           {quickemessageId
-            ? `${i18n.t("quickMessages.dialog.edit")}`
-            : `${i18n.t("quickMessages.dialog.add")}`}
+            ? `${i18n.t("quickemessage.dialog.edit")}`
+            : `${i18n.t("quickemessage.dialog.add")}`}
         </DialogTitle>
         <div style={{ display: "none" }}>
           <input
             type="file"
-            // accept="Image/*, Video/*"
+            accept=".mp4,.mp3,.pdf,.txt,.png,.jpg,.jpeg"
             ref={attachmentFile}
             onChange={(e) => handleAttachmentFile(e)}
           />
@@ -231,17 +214,15 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
             }, 400);
           }}
         >
-          {({ touched, errors, isSubmitting, setFieldValue, values }) => (
+          {({ touched, errors, isSubmitting, values }) => (
             <Form>
               <DialogContent dividers>
                 <Grid spacing={2} container>
                   <Grid xs={12} item>
                     <Field
                       as={TextField}
-                      autoFocus
-                      label={i18n.t("quickMessages.dialog.shortcode")}
+                      label={i18n.t("quickemessage.dialog.form.shortcode")}
                       name="shortcode"
-                      disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
                       error={touched.shortcode && Boolean(errors.shortcode)}
                       helperText={touched.shortcode && errors.shortcode}
                       variant="outlined"
@@ -252,83 +233,66 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                   <Grid xs={12} item>
                     <Field
                       as={TextField}
-                      label={i18n.t("quickMessages.dialog.message")}
+                      label={i18n.t("quickemessage.dialog.form.message")}
                       name="message"
-                      inputRef={messageInputRef}
                       error={touched.message && Boolean(errors.message)}
                       helperText={touched.message && errors.message}
                       variant="outlined"
                       margin="dense"
-                      disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
                       multiline={true}
                       rows={7}
                       fullWidth
-                    // disabled={quickemessage.mediaPath || attachment ? true : false}
+                      disabled={quickemessage.mediaPath || attachment ? true : false}
                     />
                   </Grid>
-                  <Grid item>
-                    <MessageVariablesPicker
-                      disabled={isSubmitting || (quickemessageId && values.visao && !values.geral && values.userId !== user.id)}
-                      onClick={value => handleClickMsgVar(value, setFieldValue)}
-                    />
-                  </Grid>
-                  {/* {(profile === "admin" || profile === "supervisor") && ( */}
+                  {showCaption && (
+  <Grid xs={12} item>
+    <Field
+      as={TextField}
+      label="Caption"
+      name="caption"
+      error={touched.caption && Boolean(errors.caption)}
+      helperText={touched.caption && errors.caption}
+      variant="outlined"
+      margin="dense"
+      multiline={true}
+      rows={7}
+      fullWidth
+    />
+  </Grid>
+)}
+                  {(profile === "admin" || profile === "supervisor") && (
                   <Grid xs={12} item>
                     <FormControl variant="outlined" margin="dense" fullWidth>
                       <InputLabel id="geral-selection-label">
-                        {i18n.t("quickMessages.dialog.visao")}
+                        {i18n.t("quickemessage.dialog.form.geral")}
                       </InputLabel>
                       <Field
                         as={Select}
-                        label={i18n.t("quickMessages.dialog.visao")}
-                        placeholder={i18n.t("quickMessages.dialog.visao")}
-                        labelId="visao-selection-label"
-                        id="visao"
-                        disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
-                        name="visao"
-                        onChange={(e) => {
-                          setFieldValue("visao", e.target.value === "true");
-                        }}
-                        error={touched.visao && Boolean(errors.visao)}
-                        value={values.visao ? "true" : "false"} // Converte o valor booleano para string
+                        label={i18n.t("quickemessage.dialog.form.geral")}
+                        placeholder={i18n.t("quickemessage.dialog.form.geral")}
+                        labelId="geral-selection-label"
+                        id="geral"
+                        name="geral"
+                        error={touched.geral && Boolean(errors.geral)}
                       >
-                        <MenuItem value={"true"}>{i18n.t("announcements.active")}</MenuItem>
-                        <MenuItem value={"false"}>{i18n.t("announcements.inactive")}</MenuItem>
+                        <MenuItem value={true}>Ativo</MenuItem>
+                        <MenuItem value={false}>Inativo</MenuItem>
                       </Field>
                     </FormControl>
-                    {/* Renderização condicional do novo item */}
-                    {values.visao === true && (
-                      <FormControl variant="outlined" margin="dense" fullWidth>
-                        <InputLabel id="geral-selection-label">
-                          {i18n.t("quickMessages.dialog.geral")}
-                        </InputLabel>
-                        <Field
-                          as={Select}
-                          label={i18n.t("quickMessages.dialog.geral")}
-                          placeholder={i18n.t("quickMessages.dialog.geral")}
-                          labelId="novo-item-selection-label"
-                          id="geral"
-                          name="geral"
-                          disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
-                          value={values.geral ? "true" : "false"} // Converte o valor booleano para string
-                          error={touched.geral && Boolean(errors.geral)}
-                        >
-                          <MenuItem value={"true"}>{i18n.t("announcements.active")}</MenuItem>
-                          <MenuItem value={"false"}>{i18n.t("announcements.inactive")}</MenuItem>
-                        </Field>
-                      </FormControl>
-                    )}
                   </Grid>
-                  {/* )} */}
+                  )}
                   {(quickemessage.mediaPath || attachment) && (
                     <Grid xs={12} item>
                       <Button startIcon={<AttachFileIcon />}>
                         {attachment ? attachment.name : quickemessage.mediaName}
                       </Button>
                       <IconButton
-                        onClick={() => setConfirmationOpen(true)}
+                        onClick={() => {
+      						setAttachment(null);
+      						setShowCaption(false);
+    					}}
                         color="secondary"
-                        disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
                       >
                         <DeleteOutlineIcon color="secondary" />
                       </IconButton>
@@ -341,10 +305,10 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                   <Button
                     color="primary"
                     onClick={() => attachmentFile.current.click()}
-                    disabled={isSubmitting || (quickemessageId && values.visao && !values.geral && values.userId !== user.id)}
+                    disabled={isSubmitting}
                     variant="outlined"
                   >
-                    {i18n.t("quickMessages.buttons.attach")}
+                    {i18n.t("quickemessage.dialog.buttons.attach")}
                   </Button>
                 )}
                 <Button
@@ -353,18 +317,18 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                   disabled={isSubmitting}
                   variant="outlined"
                 >
-                  {i18n.t("quickMessages.buttons.cancel")}
+                  {i18n.t("quickemessage.dialog.buttons.cancel")}
                 </Button>
                 <Button
                   type="submit"
                   color="primary"
-                  disabled={isSubmitting || (quickemessageId && values.visao && !values.geral && values.userId !== user.id)}
+                  disabled={isSubmitting}
                   variant="contained"
                   className={classes.btnWrapper}
                 >
                   {quickemessageId
-                    ? `${i18n.t("quickMessages.buttons.edit")}`
-                    : `${i18n.t("quickMessages.buttons.add")}`}
+                    ? `${i18n.t("quickemessage.dialog.buttons.edit")}`
+                    : `${i18n.t("quickemessage.dialog.buttons.add")}`}
                   {isSubmitting && (
                     <CircularProgress
                       size={24}

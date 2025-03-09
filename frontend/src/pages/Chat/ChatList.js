@@ -25,10 +25,10 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     position: "relative",
     flex: 1,
-    height: "calc(100% - 10px)",
+    height: "calc(100% - 58px)",
     overflow: "hidden",
     borderRadius: 0,
-    backgroundColor: theme.mode === 'light' ? "#fff" : "#7f7f7f",
+    backgroundColor: "white",
   },
   chatList: {
     display: "flex",
@@ -38,20 +38,8 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
-  listItemActive: {
-    cursor: "pointer",
-    backgroundColor: '#ebf4ff',
-    borderRadius: '10px',
-  },
   listItem: {
     cursor: "pointer",
-    backgroundColor: theme.palette.background.color,
-    margin: '6px 0',
-    borderRadius: '10px',
-  },
-  list: {
-    margin: '0 10px 0 5px',
-    paddingTop: '0',
   },
 }));
 
@@ -65,7 +53,7 @@ export default function ChatList({
 }) {
   const classes = useStyles();
   const history = useHistory();
-  const { user, socket } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const { datetimeToClient } = useDate();
 
   const [confirmationModal, setConfirmModalOpen] = useState(false);
@@ -119,6 +107,13 @@ export default function ChatList({
       : "";
   };
 
+  const getItemStyle = (chat) => {
+    return {
+      borderLeft: chat.uuid === id ? "6px solid #002d6e" : null,
+      backgroundColor: chat.uuid === id ? "#eee" : null,
+    };
+  };
+
   return (
     <>
       <ConfirmationModal
@@ -131,15 +126,15 @@ export default function ChatList({
       </ConfirmationModal>
       <div className={classes.mainContainer}>
         <div className={classes.chatList}>
-          <List className={classes.list}>
+          <List>
             {Array.isArray(chats) &&
               chats.length > 0 &&
               chats.map((chat, key) => (
                 <ListItem
                   onClick={() => goToMessages(chat)}
                   key={key}
-                  className={chat.uuid === id ? classes.listItemActive : classes.listItem}
-                  // style={getItemStyle(chat)}
+                  className={classes.listItem}
+                  style={getItemStyle(chat)}
                   button
                 >
                   <ListItemText

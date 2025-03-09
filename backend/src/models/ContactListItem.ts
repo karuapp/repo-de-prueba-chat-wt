@@ -56,9 +56,6 @@ class ContactListItem extends Model<ContactListItem> {
 
   @BelongsTo(() => ContactList)
   contactList: ContactList;
-
-  @Column
-  isGroup: boolean;
 }
 
 export default ContactListItem;

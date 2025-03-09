@@ -1,6 +1,7 @@
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
+import Whatsapp from "../../models/Whatsapp";
 
 interface Params {
   companyId: string | number;
@@ -13,7 +14,8 @@ const SimpleListService = async ({ companyId }: Params): Promise<User[]> => {
     },
     attributes: ["name", "id", "email"],
     include: [
-      { model: Queue, as: 'queues' }
+      { model: Queue, as: 'queues' },
+      { model: Whatsapp, as: "wbots", attributes: ["id", "name"] }
     ],
     order: [["id", "ASC"]]
   });

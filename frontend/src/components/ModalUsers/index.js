@@ -22,9 +22,12 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import QueueSelect from "../QueueSelect";
+import QueueSelectCustom from "../QueueSelectCustom";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
+import OnlyForSuperUser from "../../components/OnlyForSuperUser";
+import WbotSelectCustom from "../WbotSelectCustom";
+
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -79,6 +82,7 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
 
   const [user, setUser] = useState(initialState);
   const [selectedQueueIds, setSelectedQueueIds] = useState([]);
+  const [selectedWbotIds, setSelectedWbotIds] = useState([]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -91,6 +95,10 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
           });
           const userQueueIds = data.queues?.map((queue) => queue.id);
           setSelectedQueueIds(userQueueIds);
+
+          const userWbotIds = data.wbots?.map((wbot) => wbot.id);
+          setSelectedWbotIds(userWbotIds);
+
         } catch (err) {
           toastError(err);
         }
@@ -106,7 +114,7 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
   };
 
   const handleSaveUser = async (values) => {
-    const userData = { ...values, companyId, queueIds: selectedQueueIds };
+    const userData = { ...values, companyId, queueIds: selectedQueueIds, wbotIds: selectedWbotIds };
     try {
       if (userId) {
         await api.put(`/users/${userId}`, userData);
@@ -205,8 +213,10 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
                             id="profile-selection"
                             required
                           >
+                            <MenuItem value="supervisor">Supervisor</MenuItem>
                             <MenuItem value="admin">Admin</MenuItem>
                             <MenuItem value="user">User</MenuItem>
+
                           </Field>
                         </>
                       )}
@@ -217,12 +227,22 @@ const ModalUsers = ({ open, onClose, userId, companyId }) => {
                   role={loggedInUser.profile}
                   perform="user-modal:editQueues"
                   yes={() => (
-                    <QueueSelect
+                    <QueueSelectCustom
+                      companyId={companyId}
                       selectedQueueIds={selectedQueueIds}
                       onChange={(values) => setSelectedQueueIds(values)}
                     />
                   )}
                 />
+
+
+                <WbotSelectCustom
+                  companyId={companyId}
+                  selectedWbotIds={selectedWbotIds}
+                  onChange={(values) => setSelectedWbotIds(values)}
+                />
+
+
               </DialogContent>
               <DialogActions>
                 <Button

@@ -3,8 +3,8 @@ import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
 import Company from "../../models/Company";
 import Plan from "../../models/Plan";
-import Chatbot from "../../models/Chatbot";
-import User from "../../models/User";
+import { TypebotService } from "../TypebotService/apiTypebotService";
+import { N8nService } from "../N8nService/apiN8nService";
 
 interface QueueData {
   name: string;
@@ -13,17 +13,24 @@ interface QueueData {
   greetingMessage?: string;
   outOfHoursMessage?: string;
   schedules?: any[];
-  chatbots?: Chatbot[];
-  orderQueue?: number;
+  isChatbot?: boolean;
+  prioridade: number;
   ativarRoteador?: boolean;
   tempoRoteador: number;
-  integrationId?: number;
-  fileListId?: number;
-  closeTicket?: boolean;
+  workspaceTypebot?: string;
+  typeChatbot?: string;
+  typebotId?: string;
+  publicId?: string;
+  resetChatbotMsg?: Boolean;
+  n8n?: string
+  n8nId?: string
+  timeTransbordo?: number,
+  transbordoQueueId?: number,
+  messageTransbordo?: string
 }
 
 const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
-  const { color, name, companyId } = queueData;
+  const { color, name, companyId, prioridade, ativarRoteador, tempoRoteador } = queueData;
 
   const company = await Company.findOne({
     where: {
@@ -92,22 +99,23 @@ const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
     throw new AppError(err.message);
   }
 
-  const queue = await Queue.create(queueData, {
-    include: [
-      {
-        model: Chatbot,
-        as: "chatbots",
-        include: [
-          {
-            model: User,
-            as: "user"
-          }
-        ],
-        // attributes: ["id", "name", "greetingMessage", "isAgent"],
-        order: [[{ model: Chatbot, as: "chatbots" }, "id", "asc"]]
-      }
-    ]
-  });
+  if (queueData.typebotId) {
+    const { typebot } = await TypebotService.getTypebot(companyId, queueData.typebotId)
+    queueData = {
+      ...queueData,
+      publicId: typebot?.publicId
+    }
+  }
+
+  if (queueData.n8n) {
+    const n8n = await N8nService.getN8N(companyId, queueData.n8n)
+    queueData = {
+      ...queueData,
+      n8n: n8n
+    }
+  }
+
+  const queue = await Queue.create(queueData);
 
   return queue;
 };

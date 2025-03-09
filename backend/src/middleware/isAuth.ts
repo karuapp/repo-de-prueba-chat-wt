@@ -1,13 +1,10 @@
 import { verify } from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
-
+import { logger } from "../utils/logger";
 import AppError from "../errors/AppError";
 import authConfig from "../config/auth";
-
-import { getIO } from "../libs/socket";
-import ShowUserService from "../services/UserServices/ShowUserService";
-import { updateUser } from "../helpers/updateUser";
-// import { moment} from "moment-timezone"
+import User from "../models/User";
+import Queue from "../models/Queue";
 
 interface TokenPayload {
   id: string;
@@ -18,18 +15,12 @@ interface TokenPayload {
   exp: number;
 }
 
-const isAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+const isAuth = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }
-
-  // const check = await verifyHelper();
-
-  // if (!check) {
-  //   throw new AppError("ERR_SYSTEM_INVALID", 401);
-  // }
 
   const [, token] = authHeader.split(" ");
 
@@ -37,22 +28,28 @@ const isAuth = async (req: Request, res: Response, next: NextFunction): Promise<
     const decoded = verify(token, authConfig.secret);
     const { id, profile, companyId } = decoded as TokenPayload;
 
-    updateUser(id, companyId);
+    let user;
+    
+    if (id && id !== "undefined" && id !== "null") {
+      user =  await User.findByPk(id, { include: [Queue] });
+        if (user) {
+          user.online = true;
+          await user.save();
+        } else {
+          logger.info(`onConnect: User ${user?.name} not found`);
+        }
+      } else {
+        logger.info("onConnect: Missing userId");
+      }  
+      
 
     req.user = {
       id,
       profile,
       companyId
     };
-  } catch (err: any) {
-    if (err.message === "ERR_SESSION_EXPIRED" && err.statusCode === 401) {
-      throw new AppError(err.message, 401);
-    } else {
-      throw new AppError(
-        "Invalid token. We'll try to assign a new one on next request",
-        403
-      );
-    }
+  } catch (err) {
+    throw new AppError("Expired Session - New token generated!", 403 );
   }
 
   return next();

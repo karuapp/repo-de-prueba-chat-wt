@@ -1,31 +1,48 @@
-import React from 'react';
-import { Backdrop, makeStyles } from '@material-ui/core';
-import clsx from 'clsx';
-import './BackdropLoading.css';
+import React, { useState, useContext, useEffect } from "react";
 
-const useStyles = makeStyles((theme) => ({
-  backdrop: {
-    zIndex: theme.zIndex.drawer + 1,
-  },
-  logo: {
-    marginBottom: theme.spacing(2),
-  },
+import Backdrop from "@material-ui/core/Backdrop";
+import CircularProgress from "@material-ui/core/CircularProgress";
+import { makeStyles } from "@material-ui/core/styles";
+import api from "../../services/api";
+
+const useStyles = makeStyles(theme => ({
+	backdrop: {
+		//background: "linear-gradient(to right, #3c6afb , #3c6afb , #C5AEF2)",
+		zIndex: theme.zIndex.drawer + 1,
+		color: "#fff",
+	},
 }));
 
 const BackdropLoading = () => {
-  const classes = useStyles();
+	const classes = useStyles();
+    const [backdropColor, setbackdropColor] = useState('');
 
-  return (
-    <Backdrop className={clsx('BLbackdrop', classes.backdrop)} open={true}>
-      <div className="BLsplashScreen">
-        <img src="/loading-progress.png" alt="Logo Atevus" className={clsx('BLlogo', classes.logo)} />
-        <div className="BLwrapper">
-          <div className="BLslide"></div>
-          
-        </div>
-      </div>
-    </Backdrop>
-  );
+  useEffect(() => {
+    fetchBackdropBackground();
+  }, []);
+
+  const fetchBackdropBackground = async () => {
+  
+ 
+    try {
+      const response = await api.get("/settings/backgroundPages");
+      const backdropBackground = response.data.value;
+      setbackdropColor(backdropBackground);
+    } catch (error) {
+      console.error('Error retrieving toolbar background color', error);
+    }
+  };
+
+  const backdropStyle = {
+    background: backdropColor,
+  };
+
+
+	return (
+		<Backdrop className={classes.backdrop} open={true} style={backdropStyle}>
+			<CircularProgress color="secondary" />
+		</Backdrop>
+	);
 };
 
 export default BackdropLoading;

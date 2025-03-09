@@ -120,7 +120,6 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
         await api.put(`/announcements/${announcementId}`, announcementData);
         if (attachment != null) {
           const formData = new FormData();
-          formData.append("typeArch", "announcements");
           formData.append("file", attachment);
           await api.post(
             `/announcements/${announcementId}/media-upload`,
@@ -131,9 +130,7 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
         const { data } = await api.post("/announcements", announcementData);
         if (attachment != null) {
           const formData = new FormData();
-          formData.append("typeArch", "announcements");
           formData.append("file", attachment);
-
           await api.post(`/announcements/${data.id}/media-upload`, formData);
         }
       }
@@ -251,8 +248,8 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
                         name="status"
                         error={touched.status && Boolean(errors.status)}
                       >
-                        <MenuItem value={true}>{i18n.t("announcements.dialog.form.active")}</MenuItem>
-                        <MenuItem value={false}>{i18n.t("announcements.dialog.form.inactive")}</MenuItem>
+                        <MenuItem value={true}>Ativo</MenuItem>
+                        <MenuItem value={false}>Inativo</MenuItem>
                       </Field>
                     </FormControl>
                   </Grid>
@@ -272,9 +269,9 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
                         name="priority"
                         error={touched.priority && Boolean(errors.priority)}
                       >
-                        <MenuItem value={1}>{i18n.t("announcements.dialog.form.high")}</MenuItem>
-                        <MenuItem value={2}>{i18n.t("announcements.dialog.form.medium")}</MenuItem>
-                        <MenuItem value={3}>{i18n.t("announcements.dialog.form.low")}</MenuItem>
+                        <MenuItem value={1}>Alta</MenuItem>
+                        <MenuItem value={2}>Média</MenuItem>
+                        <MenuItem value={3}>Baixa</MenuItem>
                       </Field>
                     </FormControl>
                   </Grid>
@@ -287,7 +284,7 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
                         onClick={() => setConfirmationOpen(true)}
                         color="secondary"
                       >
-                        <DeleteOutlineIcon />
+                        <DeleteOutlineIcon color="secondary" />
                       </IconButton>
                     </Grid>
                   )}
@@ -320,8 +317,8 @@ const AnnouncementModal = ({ open, onClose, announcementId, reload }) => {
                   className={classes.btnWrapper}
                 >
                   {announcementId
-                    ? `${i18n.t("announcements.dialog.buttons.edit")}`
-                    : `${i18n.t("announcements.dialog.buttons.add")}`}
+                    ? `${i18n.t("announcements.dialog.buttons.add")}`
+                    : `${i18n.t("announcements.dialog.buttons.edit")}`}
                   {isSubmitting && (
                     <CircularProgress
                       size={24}

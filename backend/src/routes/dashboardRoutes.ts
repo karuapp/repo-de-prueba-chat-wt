@@ -6,8 +6,5 @@ import * as DashboardController from "../controllers/DashbardController";
 const routes = express.Router();
 
 routes.get("/dashboard", isAuth, DashboardController.index);
-routes.get("/dashboard/ticketsUsers", DashboardController.reportsUsers);
-routes.get("/dashboard/ticketsDay", DashboardController.reportsDay);
-routes.get("/dashboard/moments",isAuth, DashboardController.DashTicketsQueues);
 
 export default routes;

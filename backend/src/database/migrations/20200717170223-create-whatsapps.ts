@@ -21,6 +21,15 @@ module.exports = {
       battery: {
         type: DataTypes.STRING
       },
+      webhook: {
+        type: DataTypes.STRING
+      },
+      ignoreNumbers: {
+        type: DataTypes.STRING
+      },
+      number: {
+        type: DataTypes.STRING
+      },
       plugged: {
         type: DataTypes.BOOLEAN
       },

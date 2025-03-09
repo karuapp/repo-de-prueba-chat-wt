@@ -3,52 +3,41 @@ import Whatsapp from "../models/Whatsapp";
 import GetDefaultWhatsAppByUser from "./GetDefaultWhatsAppByUser";
 
 const GetDefaultWhatsApp = async (
-  whatsappId?: number,
-  companyId: number | null = null,
+  companyId: number,
   userId?: number
 ): Promise<Whatsapp> => {
-  let connection: Whatsapp;
-  let defaultWhatsapp = null;
-
-  console.log({ whatsappId, companyId, userId })
-  
-  if (whatsappId) {
-    defaultWhatsapp = await Whatsapp.findOne({
-      where: { id: whatsappId, companyId }
-    });
-  } else {
-    defaultWhatsapp = await Whatsapp.findOne({
-      where: { status: "CONNECTED", companyId, isDefault: true }
-    });
-  }
-
-
-  if (defaultWhatsapp?.status === 'CONNECTED') {
-    connection = defaultWhatsapp;
-  } else {
-    const whatsapp = await Whatsapp.findOne({
-      where: { status: "CONNECTED", companyId }
-    });
-    connection = whatsapp;
-  }
-
-  if (userId) {
-    const whatsappByUser = await GetDefaultWhatsAppByUser(userId);
-    if (whatsappByUser?.status === 'CONNECTED') {
-      connection = whatsappByUser;
-    } else {
-      const whatsapp = await Whatsapp.findOne({
-        where: { status: "CONNECTED", companyId }
-      });
-      connection = whatsapp;
+  if(userId) {
+    const whatsappByUser = await GetDefaultWhatsAppByUser(userId,);
+    if(whatsappByUser !== null) {
+      return whatsappByUser;
     }
   }
 
-  if (!connection) {
-    throw new AppError(`ERR_NO_DEF_WAPP_FOUND in COMPANY ${companyId}`);
+  const defaultWhatsapp = await Whatsapp.findOne({
+    where: { isDefault: true, companyId }
+  });
+
+  if (!defaultWhatsapp) {
+    throw new AppError("ERR_NO_DEF_WAPP_FOUND");
   }
 
-  return connection;
+  return defaultWhatsapp;
 };
+
+/*
+
+const GetDefaultWhatsApp = async (companyId: number): Promise<Whatsapp> => {
+  const defaultWhatsapp = await Whatsapp.findOne({
+    where: { isDefault: true, companyId }
+  });
+
+  if (!defaultWhatsapp) {
+    throw new AppError("ERR_NO_DEF_WAPP_FOUND");
+  }
+
+  return defaultWhatsapp;
+};
+
+*/
 
 export default GetDefaultWhatsApp;

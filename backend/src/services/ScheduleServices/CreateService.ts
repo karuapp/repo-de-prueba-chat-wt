@@ -9,17 +9,14 @@ interface Request {
   contactId: number | string;
   companyId: number | string;
   userId?: number | string;
-  ticketUserId?: number | string;
-  queueId?: number | string;
-  openTicket?: string;
-  statusTicket?: string;
-  whatsappId?: number | string;
-  intervalo?: number;
-  valorIntervalo?: number;
-  enviarQuantasVezes?: number;
-  tipoDias?: number;
-  contadorEnvio?: number;
-  assinar?: boolean;
+  geral?: boolean;
+  queueId?: number;
+  whatsappId?: number;
+  mediaPath: string | null | undefined;
+  mediaName: string | null | undefined;
+  repeatEvery?:string;
+  selectDaysRecorrenci?: string;
+  repeatCount?:string;
 }
 
 const CreateService = async ({
@@ -28,17 +25,14 @@ const CreateService = async ({
   contactId,
   companyId,
   userId,
-  ticketUserId,
+  geral,
   queueId,
-  openTicket,
-  statusTicket,
   whatsappId,
-  intervalo,
-  valorIntervalo,
-  enviarQuantasVezes,
-  tipoDias,
-  assinar,
-  contadorEnvio
+  mediaPath,
+  mediaName,
+  repeatEvery,
+  selectDaysRecorrenci,
+  repeatCount,
 }: Request): Promise<Schedule> => {
   const schema = Yup.object().shape({
     body: Yup.string().required().min(5),
@@ -59,17 +53,14 @@ const CreateService = async ({
       companyId,
       userId,
       status: 'PENDENTE',
-      ticketUserId,
-      queueId,
-      openTicket,
-      statusTicket,
+      geral,
+  	  queueId,
       whatsappId,
-      intervalo,
-      valorIntervalo,
-      enviarQuantasVezes,
-      tipoDias,
-      assinar,
-      contadorEnvio
+      mediaPath,
+      mediaName,
+      repeatEvery,
+      selectDaysRecorrenci,
+      repeatCount,
     }
   );
 

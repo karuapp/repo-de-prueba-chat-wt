@@ -1,218 +1,164 @@
-import React, { useState, useEffect, useMemo } from "react";
-import api from "./services/api";
-import "react-toastify/dist/ReactToastify.css";
-import { QueryClient, QueryClientProvider } from "react-query";
-import { ptBR } from "@material-ui/core/locale";
-import { createTheme, ThemeProvider } from "@material-ui/core/styles";
-import { useMediaQuery } from "@material-ui/core";
-import ColorModeContext from "./layout/themeContext";
-import { ActiveMenuProvider } from "./context/ActiveMenuContext";
-import Favicon from "react-favicon";
-import { getBackendUrl } from "./config";
-import Routes from "./routes";
-import defaultLogoLight from "./assets/logo.png";
-import defaultLogoDark from "./assets/logo-black.png";
-import defaultLogoFavicon from "./assets/favicon.ico";
-import useSettings from "./hooks/useSettings";
+import React, { useContext, useState, useEffect } from 'react';
+import Routes from './routes';
+import 'react-toastify/dist/ReactToastify.css';
+import { createTheme, ThemeProvider } from '@material-ui/core/styles';
+import { ptBR } from '@material-ui/core/locale';
+import EventEmitter from 'eventemitter3';
+import {
+  CssBaseline,
+  Switch,
+  FormGroup,
+  FormControlLabel,
+  makeStyles,
+} from '@material-ui/core';
+import lightBackground from '../src/assets/wa-background-light.png';
+import darkBackground from '../src/assets/wa-background-dark.jpg';
+import MomentUtils from '@date-io/moment';
+import moment from 'moment';
 
-const queryClient = new QueryClient();
+import api from '../src/services/api';
+import { DatePickerField } from './components/FormFields';
+import {
+  KeyboardDatePicker,
+  MuiPickersUtilsProvider,
+} from '@material-ui/pickers';
+import DateFnsUtils from '@date-io/date-fns';
+import { format } from 'date-fns';
+import { SocketContext, socketManager } from './context/Socket/SocketContext';
+
+
+
+const useStyles = makeStyles(() => ({
+  switch: {
+    margin: '2px',
+    position: 'absolute',
+    right: '0',
+  },
+  visible: {
+    display: 'none',
+  },
+}));
+
+export const mainEvents = new EventEmitter();
 
 const App = () => {
   const [locale, setLocale] = useState();
-  const appColorLocalStorage = localStorage.getItem("primaryColorLight") || localStorage.getItem("primaryColorDark") || "#065183";
-  const appNameLocalStorage = localStorage.getItem("appName") || "";
-  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
-  const preferredTheme = window.localStorage.getItem("preferredTheme");
-  const [mode, setMode] = useState(preferredTheme ? preferredTheme : prefersDarkMode ? "dark" : "light");
-  const [primaryColorLight, setPrimaryColorLight] = useState(appColorLocalStorage);
-  const [primaryColorDark, setPrimaryColorDark] = useState(appColorLocalStorage);
-  const [appLogoLight, setAppLogoLight] = useState(defaultLogoLight);
-  const [appLogoDark, setAppLogoDark] = useState(defaultLogoDark);
-  const [appLogoFavicon, setAppLogoFavicon] = useState(defaultLogoFavicon);
-  const [appName, setAppName] = useState(appNameLocalStorage);
-  const { getPublicSetting } = useSettings();
-
-  const colorMode = useMemo(
-    () => ({
-      toggleColorMode: () => {
-        setMode((prevMode) => {
-          const newMode = prevMode === "light" ? "dark" : "light";
-          window.localStorage.setItem("preferredTheme", newMode); // Persistindo o tema no localStorage
-          return newMode;
-        });
-      },
-      setPrimaryColorLight,
-      setPrimaryColorDark,
-      setAppLogoLight,
-      setAppLogoDark,
-      setAppLogoFavicon,
-      setAppName,
-      appLogoLight,
-      appLogoDark,
-      appLogoFavicon,
-      appName,
-      mode,
-    }),
-    [appLogoLight, appLogoDark, appLogoFavicon, appName, mode]
-  );
-
-  const theme = useMemo(
-    () =>
-      createTheme(
-        {
-          scrollbarStyles: {
-            "&::-webkit-scrollbar": {
-              width: "8px",
-              height: "8px",
-            },
-            "&::-webkit-scrollbar-thumb": {
-              boxShadow: "inset 0 0 6px rgba(0, 0, 0, 0.3)",
-              backgroundColor: mode === "light" ? primaryColorLight : primaryColorDark,
-            },
-          },
-          scrollbarStylesSoft: {
-            "&::-webkit-scrollbar": {
-              width: "8px",
-            },
-            "&::-webkit-scrollbar-thumb": {
-              backgroundColor: mode === "light" ? "#F3F3F3" : "#333333",
-            },
-          },
-          palette: {
-            type: mode,
-            primary: { main: mode === "light" ? primaryColorLight : primaryColorDark },
-            textPrimary: mode === "light" ? primaryColorLight : primaryColorDark,
-            borderPrimary: mode === "light" ? primaryColorLight : primaryColorDark,
-            dark: { main: mode === "light" ? "#333333" : "#F3F3F3" },
-            light: { main: mode === "light" ? "#F3F3F3" : "#333333" },
-            fontColor: mode === "light" ? primaryColorLight : primaryColorDark,
-            tabHeaderBackground: mode === "light" ? "#f0f2f5" : "#666",
-            optionsBackground: mode === "light" ? "#fafafa" : "#333",
-            fancyBackground: mode === "light" ? "#fafafa" : "#333",
-            total: mode === "light" ? "#fff" : "#222",
-            messageIcons: mode === "light" ? "grey" : "#F3F3F3",
-            inputBackground: mode === "light" ? "#FFFFFF" : "#333",
-            barraSuperior: mode === "light" ? primaryColorLight : "#666",
-          },
-          mode,
-          appLogoLight,
-          appLogoDark,
-          appLogoFavicon,
-          appName,
-          calculatedLogoDark: () => {
-            if (appLogoDark === defaultLogoDark && appLogoLight !== defaultLogoLight) {
-              return appLogoLight;
-            }
-            return appLogoDark;
-          },
-          calculatedLogoLight: () => {
-            if (appLogoDark !== defaultLogoDark && appLogoLight === defaultLogoLight) {
-              return appLogoDark;
-            }
-            return appLogoLight;
-          },
-        },
-        locale
-      ),
-    [appLogoLight, appLogoDark, appLogoFavicon, appName, locale, mode, primaryColorDark, primaryColorLight]
-  );
+  const [checked, setChecked] = React.useState(false);
+  const [mainColor, setMainColor] = useState('#000000');
+  const [scrollbarColor, setScrollbarColor] = useState('#000000');
+  const classes = useStyles();
 
   useEffect(() => {
-    const i18nlocale = localStorage.getItem("i18nextLng");
-    const browserLocale = i18nlocale.substring(0, 2) + i18nlocale.substring(3, 5);
+    fetchMainColor();
+    fetchScrollbarColor();
+  }, []);
 
-    if (browserLocale === "ptBR") {
+  const fetchMainColor = async () => {
+    try {
+      const response = await api.get('/settings/mainColor');
+      const fetchedColor = response.data?.value;
+      //console.log(fetchedColor);
+      setMainColor(fetchedColor);
+    } catch (error) {
+      console.error('Error retrieving main color', error);
+    }
+  };
+
+
+  const fetchScrollbarColor = async () => {
+    try {
+      const response = await api.get('/settings/scrollbarColor');
+      const fetchedColor = response.data?.value;
+      //console.log(fetchedColor);
+      setScrollbarColor(fetchedColor);
+    } catch (error) {
+      console.error('Error retrieving scrollbar color', error);
+    }
+  };
+
+  useEffect(() => {
+    // Pass the scrollbar color to the index.html file
+    document.documentElement.style.setProperty(
+      '--scrollbar-color',
+      scrollbarColor
+    );
+  }, [scrollbarColor]);
+
+  const lightTheme = createTheme(
+    {
+      palette: {
+        primary: { main: mainColor },
+        secondary: { main: mainColor },
+        error: { main: '#ff0000' }, // cor dos icones
+      },
+      backgroundImage: `url(${lightBackground})`,
+    },
+    locale
+  );
+
+  const darkTheme = createTheme(
+    {
+      overrides: {
+        MuiCssBaseline: {
+          '@global': {
+            body: {
+              backgroundColor: '#1d2230',
+            },
+          },
+        },
+      },
+      palette: {
+        primary: { main: '#7d9bfa' },
+        divider: '#464a5c',
+        secondary: { main: '#eee' },
+        error: { main: '#ff0000' }, // cor dos icones
+        background: {
+          default: '#1d2230',
+          paper: '#2c3145',
+        },
+        text: {
+          primary: '#eee',
+          secondary: '#fff',
+        },
+      },
+      backgroundImage: `url(${darkBackground})`,
+    },
+    locale
+  );
+
+  const cacheTheme = localStorage.getItem('layout-theme') || 'light';
+
+  const [theme, setTheme] = useState(cacheTheme);
+
+  const themeToggle = () => {
+    const updatedTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(updatedTheme);
+    localStorage.setItem('layout-theme', updatedTheme);
+  };
+
+  const handleChange = () => {
+    themeToggle();
+  };
+
+  mainEvents.on('toggle-theme', handleChange);
+
+  useEffect(() => {
+    const i18nlocale = localStorage.getItem('i18nextLng');
+    const browserLocale =
+      i18nlocale.substring(0, 2) + i18nlocale.substring(3, 5);
+
+    if (browserLocale === 'ptBR') {
       setLocale(ptBR);
     }
   }, []);
 
-  useEffect(() => {
-    window.localStorage.setItem("preferredTheme", mode);
-  }, [mode]);
-
-  useEffect(() => {
-    console.log("|=========== handleSaveSetting ==========|")
-    console.log("APP START")
-    console.log("|========================================|")
-   
-    
-    getPublicSetting("primaryColorLight")
-      .then((color) => {
-        setPrimaryColorLight(color || "#0000FF");
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("primaryColorDark")
-      .then((color) => {
-        setPrimaryColorDark(color || "#39ACE7");
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("appLogoLight")
-      .then((file) => {
-        setAppLogoLight(file ? getBackendUrl() + "/public/" + file : defaultLogoLight);
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("appLogoDark")
-      .then((file) => {
-        setAppLogoDark(file ? getBackendUrl() + "/public/" + file : defaultLogoDark);
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("appLogoFavicon")
-      .then((file) => {
-        setAppLogoFavicon(file ? getBackendUrl() + "/public/" + file : defaultLogoFavicon);
-      })
-      .catch((error) => {
-        console.log("Error reading setting", error);
-      });
-    getPublicSetting("appName")
-      .then((name) => {
-        setAppName(name || "WORKZAP");
-      })
-      .catch((error) => {
-        console.log("!==== Erro ao carregar temas: ====!", error);
-        setAppName("WORKZAP");
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.style.setProperty("--primaryColor", mode === "light" ? primaryColorLight : primaryColorDark);
-  }, [primaryColorLight, primaryColorDark, mode]);
-
-  useEffect(() => {
-    async function fetchVersionData() {
-      try {
-        const response = await api.get("/version");
-        const { data } = response;
-        window.localStorage.setItem("frontendVersion", data.version);
-      } catch (error) {
-        console.log("Error fetching data", error);
-      }
-    }
-    fetchVersionData();
-  }, []);
-
   return (
-    <>
-      <Favicon url={appLogoFavicon ? getBackendUrl() + "/public/" + appLogoFavicon : defaultLogoFavicon} />
-      <ColorModeContext.Provider value={{ colorMode }}>
-        <ThemeProvider theme={theme}>
-          <QueryClientProvider client={queryClient}>
-            <ActiveMenuProvider>
-              <Routes />
-            </ActiveMenuProvider>
-          </QueryClientProvider>
-        </ThemeProvider>
-      </ColorModeContext.Provider>
-    </>
+    <ThemeProvider theme={theme === 'light' ? lightTheme : darkTheme}>
+      <SocketContext.Provider value={socketManager}>
+        <Routes />
+        <CssBaseline />
+      </SocketContext.Provider>
+    </ThemeProvider>
   );
 };
 

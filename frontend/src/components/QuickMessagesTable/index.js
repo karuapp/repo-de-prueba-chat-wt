@@ -13,7 +13,7 @@ import {
     DeleteOutline as DeleteOutlineIcon
 } from "@material-ui/icons";
 
-import TableRowSkeleton from "../TableRowSkeleton";
+import TableRowSkeleton from "../../components/TableRowSkeleton";
 
 function QuickMessagesTable(props) {
     const { messages, showLoading, editMessage, deleteMessage, readOnly } = props
@@ -49,14 +49,14 @@ function QuickMessagesTable(props) {
                                 size="small"
                                 onClick={() => handleEdit(message)}
                             >
-                                <EditIcon />
+                                <EditIcon color="secondary" />
                             </IconButton>
 
                             <IconButton
                                 size="small"
                                 onClick={() => handleDelete(message)}
                             >
-                                <DeleteOutlineIcon />
+                                <DeleteOutlineIcon color="secondary" />
                             </IconButton>
                         </TableCell>
                     ) : null}

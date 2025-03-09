@@ -3,8 +3,6 @@ import AppError from "../../errors/AppError";
 import Campaign from "../../models/Campaign";
 import ContactList from "../../models/ContactList";
 import Whatsapp from "../../models/Whatsapp";
-import User from "../../models/User";
-import Queue from "../../models/Queue";
 
 interface Data {
   name: string;
@@ -23,14 +21,12 @@ interface Data {
   confirmationMessage3?: string;
   confirmationMessage4?: string;
   confirmationMessage5?: string;
-  userId: number | string;
-  queueId: number | string;
-  statusTicket: string;
-  openTicket: string;
+  whatsappId?: string;
+  whatsappName?:string
 }
 
 const CreateService = async (data: Data): Promise<Campaign> => {
-  const { name } = data;
+  const { name, whatsappId } = data;
 
   const ticketnoteSchema = Yup.object().shape({
     name: Yup.string()
@@ -48,15 +44,21 @@ const CreateService = async (data: Data): Promise<Campaign> => {
     data.status = "PROGRAMADA";
   }
 
-  const record = await Campaign.create(data);
+  if (whatsappId) {
+    const whatsapp = await Whatsapp.findByPk(parseInt(whatsappId));
+    if (whatsapp) {
+      data.whatsappName = whatsapp.name;
+    } else {
+      throw new AppError("ERR_WHATSAPP_NOT_FOUND");
+    }
+  }
 
+  const record = await Campaign.create(data);
   await record.reload({
     include: [
-      { model: ContactList },
-      { model: Whatsapp, attributes: ["id", "name"] },
-      { model: User, attributes: ["id", "name"] },
-      { model: Queue, attributes: ["id", "name"] },
-        ]
+      { model: ContactList }
+      // { model: Whatsapp, attributes: ["id", "name"] }
+    ]
   });
 
   return record;

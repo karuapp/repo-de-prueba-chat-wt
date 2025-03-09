@@ -29,14 +29,7 @@ class Announcement extends Model<Announcement> {
   text: string;
 
   @Column
-  get mediaPath(): string | null {
-    if (this.getDataValue("mediaPath")) {
-      
-      return `${process.env.BACKEND_URL}${process.env.PROXY_PORT ?`:${process.env.PROXY_PORT}`:""}/public/announcements/${this.getDataValue("mediaPath")}`;
-
-    }
-    return null;
-  }
+  mediaPath: string;
 
   @Column
   mediaName: string;

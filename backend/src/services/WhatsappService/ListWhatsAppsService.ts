@@ -1,7 +1,6 @@
 import { FindOptions } from "sequelize/types";
 import Queue from "../../models/Queue";
 import Whatsapp from "../../models/Whatsapp";
-import Prompt from "../../models/Prompt";
 
 interface Request {
   companyId: number;
@@ -21,10 +20,6 @@ const ListWhatsAppsService = async ({
         model: Queue,
         as: "queues",
         attributes: ["id", "name", "color", "greetingMessage"]
-      },
-      {
-        model: Prompt,
-        as: "prompt",
       }
     ]
   };
@@ -37,7 +32,5 @@ const ListWhatsAppsService = async ({
 
   return whatsapps;
 };
-
-
 
 export default ListWhatsAppsService;

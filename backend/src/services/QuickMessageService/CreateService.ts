@@ -8,19 +8,17 @@ interface Data {
   companyId: number | string;
   userId: number | string;
   geral: boolean;
-  isMedia: boolean;
-  mediaPath?: string | null;
-  visao: boolean;
+  caption?: string;
 }
 
 const CreateService = async (data: Data): Promise<QuickMessage> => {
-  const { shortcode, message, isMedia } = data;
+  const { shortcode, message, geral, caption } = data;
 
   const ticketnoteSchema = Yup.object().shape({
     shortcode: Yup.string()
-      .min(1, "ERR_QUICKMESSAGE_INVALID_NAME")
+      .min(3, "ERR_QUICKMESSAGE_INVALID_NAME")
       .required("ERR_QUICKMESSAGE_REQUIRED"),
-    message: isMedia ? Yup.string().notRequired() : Yup.string()
+    message: Yup.string()
       .min(3, "ERR_QUICKMESSAGE_INVALID_NAME")
       .required("ERR_QUICKMESSAGE_REQUIRED")
   });

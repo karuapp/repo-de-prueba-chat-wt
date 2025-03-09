@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import { useHistory } from "react-router-dom";
 
 import {
@@ -13,17 +13,13 @@ import {
     MenuItem,
     Select
  } from "@material-ui/core";
-import { v4 as uuidv4 } from "uuid";
+
 
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
-import { Form, Formik } from "formik";
-import ShowTicketOpen from "../ShowTicketOpenModal";
-import useCompanySettings from "../../hooks/useSettings/companySettings";
-import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
 // const filter = createFilterOptions({
 // 	trim: true,
@@ -43,106 +39,30 @@ const useStyles = makeStyles((theme) => ({
 	},
 }));
 
-const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket }) => {
+const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId }) => {
 	const history = useHistory();
 	const classes = useStyles();
 	const [selectedQueue, setSelectedQueue] = useState('');
 	const [loading, setLoading] = useState(false);
 	const { user } = useContext(AuthContext);
-	const [ openAlert, setOpenAlert ] = useState(false);
-	const [ userTicketOpen, setUserTicketOpen] = useState("");
-	const [ queueTicketOpen, setQueueTicketOpen] = useState("");
-	const { tabOpen, setTabOpen } = useContext(TicketsContext);
-
-	const {get:getSetting} = useCompanySettings();
-
-useEffect(() => {
-	try {
-	if (user.queues.length === 1) {
-        setSelectedQueue(user.queues[0].id)
-      }
-	} catch (err) {
-		setLoading(false);
-		toastError(err);
-	}
-},[selectedQueue])
 
 const handleClose = () => {
 	onClose();
 	setSelectedQueue("");
 };
 
-const handleCloseAlert = () => {
-	setOpenAlert(false);
-	setLoading(false)
-};
-
-const handleSendMessage = async (id) => {
-
-	let isGreetingMessage = false;
-
-	try {
-		const  setting  = await getSetting({
-			"column":"sendGreetingAccepted"
-		});
-		if (setting.sendGreetingAccepted === "enabled") isGreetingMessage = true;
-	} catch (err) {
-		toastError(err);
-	}
-	
-	let settingMessage
-	try {
-		settingMessage = await getSetting({
-			"column": "greetingAcceptedMessage"
-		})
-	} catch (err) {
-		toastError(err);
-	}
-	
-	// console.log(ticket)
-	if (isGreetingMessage && (!ticket.isGroup || ticket.whatsapp?.groupAsTicket === "enabled") && ticket.status === "pending") {
-		const msg = `${settingMessage.greetingAcceptedMessage}`;
-		// const msg = `{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
-		const message = {
-			read: 1,
-			fromMe: true,
-			mediaUrl: "",
-			body: `${msg.trim()}`,
-		};
-		try {
-			await api.post(`/messages/${id}`, message);
-		} catch (err) {
-			toastError(err);
-		}
-	}
-};
-
 const handleUpdateTicketStatus = async (queueId) => {
 	setLoading(true);
 	try {
-		const otherTicket = await api.put(`/tickets/${ticketId}`, {
-			status: ticket.isGroup && ticket.channel === 'whatsapp' ? "group" : "open",
+		await api.put(`/tickets/${ticketId}`, {
+			status: "open",
 			userId: user?.id || null,
-			queueId: queueId
+            queueId: queueId
 		});
 
-		if (otherTicket.data.id !== ticket.id) {
-			if (otherTicket.data.userId !== user?.id) {
-				setOpenAlert(true)
-				setUserTicketOpen(otherTicket.data.user.name)
-				setQueueTicketOpen(otherTicket.data.queue.name)
-			} else {
-				setLoading(false);
-				setTabOpen(otherTicket.isGroup ? "group" : "open");
-				history.push(`/tickets/${otherTicket.data.uuid}`);
-			}
-		} else {
-			handleSendMessage(ticket.id)
-			setLoading(false);
-			setTabOpen(ticket.isGroup ? "group" : "open");
-			history.push(`/tickets/${ticket.uuid}`);
-			handleClose();
-		}
+		setLoading(false);
+		history.push(`/tickets/${ticketId}`);
+        handleClose();
 	} catch (err) {
 		setLoading(false);
 		toastError(err);
@@ -191,12 +111,6 @@ return (
 					{i18n.t("ticketsList.buttons.start")}
 				</ButtonWithSpinner>
 			</DialogActions>
-			<ShowTicketOpen
-				isOpen={openAlert}
-				handleClose={handleCloseAlert}
-				user={userTicketOpen}
-				queue={queueTicketOpen}
-			/>
 		</Dialog>
 	</>
 );

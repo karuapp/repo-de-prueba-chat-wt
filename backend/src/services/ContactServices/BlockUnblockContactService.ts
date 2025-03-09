@@ -1,5 +1,4 @@
 import AppError from "../../errors/AppError";
-import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import { getWbot } from "../../libs/wbot";
 import Contact from "../../models/Contact";
 import FindCompaniesWhatsappService from "../CompanyService/FindCompaniesWhatsappService";
@@ -41,25 +40,29 @@ const BlockUnblockContactService = async ({
     companyId,
     active
 }: Request): Promise<Contact> => {
-    const contact = await Contact.findByPk(contactId);
+    const contact = await Contact.findOne({
+        where: { id: contactId },
+        attributes: ["number"]
+    });
 
     if (!contact) {
         throw new AppError("ERR_NO_CONTACT_FOUND", 404);
     }
 
-    // console.log('active', active)
-    // console.log('companyId', companyId)
-    // console.log('contact.number', contact.number)
+    console.log('active', active)
+    console.log('companyId', companyId)
+    console.log('contact.number', contact.number)
 
     if (active) {
         try {
-            //const whatsappCompany = await GetDefaultWhatsApp(Number(companyId))
+            const whatsappCompany = await FindCompaniesWhatsappService(companyId)
 
-            const whatsappCompany = null;
+            console.log('whatsappCompany.id', whatsappCompany.id)
 
             const wbot = getWbot(whatsappCompany.id);
 
             const jid = createJid(contact.number);
+            console.log('jid', jid)
 
             await wbot.updateBlockStatus(jid, "unblock");
 
@@ -71,16 +74,17 @@ const BlockUnblockContactService = async ({
     }
 
     if (!active) {
-         try {
-            //const whatsappCompany = await GetDefaultWhatsApp(Number(companyId))
+        try {
+            const whatsappCompany = await FindCompaniesWhatsappService(companyId)
+            console.log('whatsappCompany.id', whatsappCompany.id)
 
-            const whatsappCompany = null;
-            
             const wbot = getWbot(whatsappCompany.id);
 
             const jid = createJid(contact.number);
+            console.log('jid', jid)
 
-            await wbot.updateBlockStatus(jid, "block");
+            const block = await wbot.updateBlockStatus(jid, "block");
+            console.log('block', block)
 
             await contact.update({ active: false });
 

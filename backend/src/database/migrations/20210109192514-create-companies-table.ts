@@ -29,6 +29,15 @@ module.exports = {
       updatedAt: {
         type: DataTypes.DATE,
         allowNull: false
+      },
+      pais: {
+        type: DataTypes.TEXT
+      },
+      namecomplete: {
+        type: DataTypes.TEXT
+      },
+      indicator: {
+        type: DataTypes.TEXT
       }
     });
   },

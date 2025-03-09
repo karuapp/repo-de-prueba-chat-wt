@@ -1,26 +1,27 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 
-import { ContactEmergency as ContactEmergencyIcon, KeyboardArrowRight as KeyboardArrowRightIcon, Close as CloseIcon, Mic, MicOff, Assistant, Block } from '@mui/icons-material';
+import { makeStyles } from "@material-ui/core/styles";
+import Typography from "@material-ui/core/Typography";
+import IconButton from "@material-ui/core/IconButton";
+import CloseIcon from "@material-ui/icons/Close";
+import Drawer from "@material-ui/core/Drawer";
+import Link from "@material-ui/core/Link";
+import InputLabel from "@material-ui/core/InputLabel";
+import Avatar from "@material-ui/core/Avatar";
+import Button from "@material-ui/core/Button";
+import Paper from "@material-ui/core/Paper";
+import CreateIcon from '@material-ui/icons/Create';
 
-import { CardHeader, Switch, makeStyles, Typography, IconButton, Drawer, Link, InputLabel, Button, Paper } from "@material-ui/core";
-
-import formatSerializedId from '../../utils/formatSerializedId';
 import { i18n } from "../../translate/i18n";
-import ModalImageCors from "../ModalImageCors"
+
 import ContactDrawerSkeleton from "../ContactDrawerSkeleton";
 import MarkdownWrapper from "../MarkdownWrapper";
+import { CardHeader, MenuItem } from "@material-ui/core";
 import { ContactForm } from "../ContactForm";
 import ContactModal from "../ContactModal";
 import { ContactNotes } from "../ContactNotes";
-
-import { AuthContext } from "../../context/Auth/AuthContext";
-import useCompanySettings from "../../hooks/useSettings/companySettings";
 import api from "../../services/api";
-import { toast } from "react-toastify";
-import { TagsKanbanContainer } from "../TagsKanbanContainer";
-
-import './contactDrawer.css';
-import clsx from 'clsx';
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 
 const drawerWidth = 320;
@@ -29,9 +30,6 @@ const useStyles = makeStyles(theme => ({
 	drawer: {
 		width: drawerWidth,
 		flexShrink: 0,
-	},
-	switchInputCustom: {
-		width: '300% !important',
 	},
 	drawerPaper: {
 		width: drawerWidth,
@@ -43,13 +41,50 @@ const useStyles = makeStyles(theme => ({
 		borderBottomRightRadius: 4,
 	},
 	header: {
-		backgroundColor: theme.palette.inputBackground,
+		display: "flex",
+		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+		backgroundColor: theme.palette.background.default,
+		alignItems: "center",
 		padding: theme.spacing(0, 1),
+		minHeight: "73px",
+		justifyContent: "flex-start",
 	},
 	content: {
-		backgroundColor: theme.palette.inputBackground,
+		display: "flex",
+		backgroundColor: theme.palette.background.paper,
+		flexDirection: "column",
+		padding: "8px 0px 8px 8px",
+		height: "100%",
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
+	},
+
+	contactAvatar: {
+		margin: 15,
+		width: 100,
+		height: 100,
+	},
+
+	contactHeader: {
+		display: "flex",
+		padding: 8,
+		flexDirection: "column",
+		alignItems: "center",
+		justifyContent: "center",
+		"& > *": {
+			margin: 4,
+		},
+	},
+
+	contactDetails: {
+		marginTop: 8,
+		padding: 8,
+		display: "flex",
+		flexDirection: "column",
+	},
+	contactExtraInfo: {
+		marginTop: 4,
+		padding: 6,
 	},
 }));
 
@@ -57,102 +92,48 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 	const classes = useStyles();
 
 	const [modalOpen, setModalOpen] = useState(false);
-	const [blockingContacts, setBlockingContacts] = useState({});
 	const [openForm, setOpenForm] = useState(false);
-	const { get } = useCompanySettings();
-	const [hideNum, setHideNum] = useState(false);
-	const { user } = useContext(AuthContext);
-	const [acceptAudioMessage, setAcceptAudio] = useState(contact.acceptAudioMessage);
-
-	useEffect(() => {
-		async function fetchData() {
-
-			const lgpdHideNumber = await get({
-				"column": "lgpdHideNumber"
-			});
-
-			if (lgpdHideNumber === "enabled") setHideNum(true);
-
-		}
-		fetchData();
-	}, [get])
+	const [membersGroup, setMembersGroup] = useState([]);
+	const { user } = useContext(AuthContext)
 
 	useEffect(() => {
 		setOpenForm(false);
+		setMembersGroup([])
 	}, [open, contact]);
 
-	useEffect(() => {
-		if (contact && contact.hasOwnProperty('acceptAudioMessage')) {
-			setAcceptAudio(contact.acceptAudioMessage);
-		}
-	}, [contact]);
 
 	useEffect(() => {
-		if (contact) {
-			setBlockingContacts(prevState => ({
-				...prevState,
-				[contact.id]: contact.active,
-			}));
-		}
-	}, [contact]);
+	}, [membersGroup]);
 
-	useEffect(() => {
-		async function fetchContactData() {
-			try {
-				if (contact && contact.id) {
-					const response = await api.get(`/contacts/${contact.id}`);
-					const updatedContact = response.data;
-					setBlockingContacts(prevState => ({
-						...prevState,
-						[updatedContact.id]: updatedContact.active
-					}));
-				}
-			} catch (err) {
-				console.log('Erro ao buscar contato:', err);
-			}
-		}
+	const handleRenderMembersGroup = async (contactNumber, whatsappId) => {
 
-		fetchContactData();
-	}, [contact]);
-
-	const handleContactToggleAcceptAudio = async () => {
 		try {
-			const contact = await api.put(`/contacts/toggleAcceptAudio/${ticket.contact.id}`);
-			setAcceptAudio(contact.data.acceptAudioMessage);
-		} catch (err) {
-			console.log('Erro ao atualizar estado do áudio:', err);
-		}
-	};
+			const { data } = await api.get(`/listMembersgroup/${contactNumber}/${whatsappId}`);
 
-	const handleBlockContact = async (contactId) => {
+			setMembersGroup(data)
+
+			console.log(data)
+		} catch (error) {
+
+		}
+	}
+
+	const handleRemoveMember = async (contactGroup, contactMember, whatsappId) => {
 		try {
-			await api.put(`/contacts/block/${contactId}`, { active: false });
-			toast.success("Contato Bloqueado");
+			const { data } = await api.put(`removeMemberGroup`, {
+				contactGroup,
+				contactMember,
+				whatsappId
+			})
 
-			setBlockingContacts(prevState => ({
-				...prevState,
-				[contactId]: false,
-			}));
-		} catch (err) {
-			console.log('Erro ao bloquear contato:', err);
+			console.log('data.jid', data)
+
+			const filterMembersGroup = membersGroup.filter(member => member.id !== data[0].jid);
+			setMembersGroup(filterMembersGroup);
+		} catch (error) {
+
 		}
-	};
-
-	const handleUnBlockContact = async (contactId) => {
-		try {
-			await api.put(`/contacts/block/${contactId}`, { active: true });
-			toast.success("Contato Desbloqueado");
-
-			setBlockingContacts(prevState => ({
-				...prevState,
-				[contactId]: true,
-			}));
-		} catch (err) {
-			console.log('Erro ao desbloquear contato:', err);
-		}
-	};
-
-	if (loading) return null;
+	}
 
 	return (
 		<>
@@ -171,7 +152,7 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 					paper: classes.drawerPaper,
 				}}
 			>
-				<div className={clsx(classes.header, 'CDheaderContact')}>
+				<div className={classes.header}>
 					<IconButton onClick={handleDrawerClose}>
 						<CloseIcon />
 					</IconButton>
@@ -182,28 +163,28 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 				{loading ? (
 					<ContactDrawerSkeleton classes={classes} />
 				) : (
-					<div className={clsx(classes.content, 'CDcontentContato')}>
-						<Paper elevation={0} className="CDcontactHeader">
-							<div className="CDimgProfile">
-								<ModalImageCors imageUrl={contact?.urlPicture} />
-							</div>
+					<div className={classes.content}>
+						<Paper square variant="outlined" className={classes.contactHeader}>
 							<CardHeader
+								onClick={() => { }}
+								style={{ cursor: "pointer", width: '100%' }}
 								titleTypographyProps={{ noWrap: true }}
 								subheaderTypographyProps={{ noWrap: true }}
-								className="CDnomeNumero"
+								avatar={<Avatar src={contact.profilePicUrl} alt="contact_image" style={{ width: 60, height: 60 }} />}
 								title={
 									<>
-										<Typography className="CDcontactName">
+										<Typography onClick={() => setOpenForm(true)}>
 											{contact.name}
+											<CreateIcon style={{ fontSize: 16, marginLeft: 5 }} />
 										</Typography>
 									</>
 								}
 								subheader={
 									<>
-										<Typography style={{ fontSize: 15 }}>
-											{hideNum && user.profile === "user" ? formatSerializedId(contact.number).slice(0, -6) + "**-**" + contact.number.slice(-2) : formatSerializedId(contact.number)}
+										<Typography style={{ fontSize: 12 }}>
+											<Link href={`tel:${contact.number}`}>{contact.number}</Link>
 										</Typography>
-										<Typography style={{ color: "primary", fontSize: 15 }}>
+										<Typography style={{ fontSize: 12 }}>
 											<Link href={`mailto:${contact.email}`}>{contact.email}</Link>
 										</Typography>
 									</>
@@ -213,99 +194,92 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 								variant="outlined"
 								color="primary"
 								onClick={() => setModalOpen(!openForm)}
-								className="CDeditarContato"
-								startIcon={<ContactEmergencyIcon />}
-								endIcon={<KeyboardArrowRightIcon />}
+								style={{ fontSize: 12 }}
 							>
-								<div id="CDbuttonEdit">{i18n.t("contactDrawer.buttons.edit")}</div>
-							</Button>
-							<Button
-								variant="outlined"
-								color="primary"
-								className="CDeditarContatoAudio"
-								startIcon={acceptAudioMessage ? <Mic /> : <MicOff />}
-							>
-								<div id="CDbuttonEditAudio">{i18n.t("ticketOptionsMenu.acceptAudioMessage")}</div>
-
-								<Switch
-									size="small"
-									checked={acceptAudioMessage}
-									onChange={handleContactToggleAcceptAudio}
-									name="acceptAudioMessage"
-									color="primary"
-									key={contact.id}
-									classes={{ input: classes.switchInputCustom }}
-								/>
-							</Button>
-							<Button
-								variant="outlined"
-								color="primary"
-								onClick={() => setModalOpen(!openForm)}
-								className="CDeditarContatoChatbot"
-								startIcon={<Assistant />}
-								endIcon={<KeyboardArrowRightIcon />}
-							>
-								<div id="CDbuttonEditChatbot">{i18n.t("contactModal.form.chatBotContact")}</div>
+								{i18n.t("contactDrawer.buttons.edit")}
 							</Button>
 							{(contact.id && openForm) && <ContactForm initialContact={contact} onCancel={() => setOpenForm(false)} />}
 						</Paper>
-						<TagsKanbanContainer ticket={ticket} />
-						<Paper square variant="outlined" className="contactDetails">
-							<ContactModal
-								open={modalOpen}
-								onClose={() => setModalOpen(false)}
-								contactId={contact.id}
-							/>
-							<Typography variant="subtitle1">
-								{i18n.t("contactDrawer.extraInfo")}
-							</Typography>
-							{contact?.extraInfo && contact.extraInfo.length > 0 ? (
-								contact.extraInfo.map(info => (
-									<Paper key={info.id} square variant="outlined" className="CDcontactExtraInfo">
-										<div style={{ display: "flex", width: "100%" }}>
-											<InputLabel className="CDinputInfoName">{info.name}</InputLabel>
-											<Typography component="div" style={{ wordWrap: 'break-word', flex: 1, color: '#737373', padding: '5px 2px' }}>
-												<MarkdownWrapper>{info.value}</MarkdownWrapper>
-											</Typography>
-										</div>
-									</Paper>
-								))
-							) : (
-								<div className="CDinfoExtra">
-									<Typography variant="body1">
-										{i18n.t("contactDrawer.phExtraInfoA")}{" "}
-										<span
-											onClick={() => setModalOpen(!openForm)}
-										>
-											{i18n.t("contactDrawer.phExtraInfoB")}
-										</span>
-									</Typography>
-								</div>
-							)}
-						</Paper>
-
-						<Paper square variant="outlined" className="contactDetails">
+						<Paper square variant="outlined" className={classes.contactDetails}>
 							<Typography variant="subtitle1" style={{ marginBottom: 10 }}>
 								{i18n.t("ticketOptionsMenu.appointmentsModal.title")}
 							</Typography>
 							<ContactNotes ticket={ticket} />
 						</Paper>
-						<Button
-							variant="outlined"
-							color="secondary"
-							onClick={() =>
-								blockingContacts[contact.id]
-									? handleBlockContact(contact.id)
-									: handleUnBlockContact(contact.id)
-							}
-							disabled={loading}
-							className="CDblockContact"
-							startIcon={<Block className="CDblockIcon" />}
-						>
-							{blockingContacts[contact.id]
-								? `Bloquear ${contact.name.split(' ')[0].charAt(0).toUpperCase() + contact.name.split(' ')[0].slice(1)}`
-								: `Desbloquear ${contact.name.split(' ')[0].charAt(0).toUpperCase() + contact.name.split(' ')[0].slice(1)}`}
-						</Button>
+						{(user.profile === 'admin' || user.profile === 'supervisor') && (
+							<>
+								{ticket.isGroup && (
+									<Paper square variant="outlined" className={classes.contactDetails}>
+										<Typography variant="subtitle1" style={{ marginBottom: 10, alignItems: 'center' }}>
+											{i18n.t("Membros do Grupo")}
+										</Typography>
+
+										<Button
+											onClick={() => {
+												handleRenderMembersGroup(ticket.contact.number, ticket.whatsappId);
+											}}
+											color='primary'
+											variant="outlined"
+										>
+											{i18n.t("Listar membros do grupo")}
+										</Button>
+									</Paper>
+								)}
+
+								{ticket.isGroup && membersGroup.length > 0 && ( // Renderiza o menu se membersGroup contiver dados
+									<Paper square variant="outlined" className={classes.contactDetails}>
+										<Typography variant="subtitle1" style={{ marginBottom: 10, alignItems: 'center' }}>
+											{i18n.t("Membros do Grupo")}
+										</Typography>
+										<div>
+											{membersGroup.map(member => (
+												<div key={member.id} style={{ display: 'flex', alignItems: 'center' }}>
+													<MenuItem>
+														{member.id.replace('@s.whatsapp.net', '')} - {member.admin ? 'Admin' : 'Membro'}
+													</MenuItem>
+													{member.admin ? null : (
+														<Button
+															variant="text"
+															color="secondary"
+															size="small"
+															style={{ marginRight: 8 }}
+															onClick={() => {
+																handleRemoveMember(ticket.contact.number, member.id, ticket.whatsappId)
+															}}
+														>
+															Remover
+														</Button>
+													)}
+												</div>
+											))}
+										</div>
+									</Paper>
+								)}
+							</>
+						)}
+						<Paper square variant="outlined" className={classes.contactDetails}>
+							<ContactModal
+								open={modalOpen}
+								onClose={() => setModalOpen(false)}
+								contactId={contact.id}
+							></ContactModal>
+							<Typography variant="subtitle1">
+								{i18n.t("contactDrawer.extraInfo")}
+							</Typography>
+							{contact?.extraInfo?.map(info => (
+								<Paper
+									key={info.id}
+									square
+									variant="outlined"
+									className={classes.contactExtraInfo}
+								>
+									<InputLabel>{info.name}</InputLabel>
+									<Typography component="div" noWrap style={{ paddingTop: 2 }}>
+										<MarkdownWrapper>{info.value}</MarkdownWrapper>
+									</Typography>
+								</Paper>
+							))}
+						</Paper>
 					</div>
 				)}
 			</Drawer>

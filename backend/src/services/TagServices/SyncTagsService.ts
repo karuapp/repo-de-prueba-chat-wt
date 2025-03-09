@@ -1,26 +1,43 @@
+import { Op } from 'sequelize';
 import Tag from "../../models/Tag";
-import Contact from "../../models/Contact";
-import ContactTag from "../../models/ContactTag";
+import Ticket from "../../models/Ticket";
+import TicketTag from "../../models/TicketTag";
+import sequelize from '../../database';
+import Contact from '../../models/Contact';
+import Queue from '../../models/Queue';
+import User from '../../models/User';
+import Whatsapp from '../../models/Whatsapp';
 
 interface Request {
   tags: Tag[];
-  contactId: number;
+  ticketId: number;
 }
 
-const SyncTags = async ({
-  tags,
-  contactId
-}: Request): Promise<Contact | null> => {
-  const contact = await Contact.findByPk(contactId, { include: [Tag] });
+const SyncTags = async ({ tags, ticketId }: Request): Promise<Ticket | null> => {
+  try {
 
-  const tagList = tags.map(t => ({ tagId: t.id, contactId }));
+    const ticket = await Ticket.findByPk(ticketId, { include: [Tag] });
 
-  await ContactTag.destroy({ where: { contactId } });
-  await ContactTag.bulkCreate(tagList);
+    if (!ticket) {
+      throw new Error('Ticket não encontrado.');
+    }
 
-  contact?.reload();
+    const tagList = tags.map(tag => ({ tagId: tag.id, ticketId }));
 
-  return contact;
+    await sequelize.transaction(async (transaction) => {
+
+      await TicketTag.destroy({ where: { ticketId }, transaction });
+
+      await TicketTag.bulkCreate(tagList, { transaction });
+
+      await ticket.reload({ include: [Tag,Contact,Queue,User,Whatsapp], transaction });
+    });
+
+    return ticket;
+  } catch (error) {
+    console.error('Erro ao sincronizar tags:', error);
+    return null;
+  }
 };
 
 export default SyncTags;

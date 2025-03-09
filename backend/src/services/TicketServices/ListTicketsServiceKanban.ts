@@ -17,8 +17,6 @@ interface Request {
   pageNumber?: string;
   status?: string;
   date?: string;
-  dateStart?: string;
-  dateEnd?: string;
   updatedAt?: string;
   showAll?: string;
   userId: string;
@@ -27,6 +25,8 @@ interface Request {
   tags: number[];
   users: number[];
   companyId: number;
+  dateFrom: string;
+  dateUntil: string;
 }
 
 interface Response {
@@ -43,25 +43,34 @@ const ListTicketsServiceKanban = async ({
   users,
   status,
   date,
-  dateStart,
-  dateEnd,
   updatedAt,
   showAll,
   userId,
   withUnreadMessages,
-  companyId
+  companyId,
+  dateFrom,
+  dateUntil
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
     [Op.or]: [{ userId }, { status: "pending" }],
     queueId: { [Op.or]: [queueIds, null] }
   };
+
   let includeCondition: Includeable[];
 
   includeCondition = [
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "email", "companyId", "urlPicture"]
+      attributes: [
+        "id",
+        "name",
+        "number",
+        "email",
+        "profilePicUrl",
+        "acceptAudioMessage"
+      ],
+      include: ["extraInfo"]
     },
     {
       model: Queue,
@@ -82,17 +91,19 @@ const ListTicketsServiceKanban = async ({
       model: Whatsapp,
       as: "whatsapp",
       attributes: ["name"]
-    },
+    }
   ];
 
   if (showAll === "true") {
     whereCondition = { queueId: { [Op.or]: [queueIds, null] } };
   }
 
-  whereCondition = {
-    ...whereCondition,
-    status: { [Op.or]: ["pending", "open"] }
-  };
+  if (status) {
+    whereCondition = {
+      ...whereCondition,
+      status
+    };
+  }
 
   if (searchParam) {
     const sanitizedSearchParam = searchParam.toLocaleLowerCase().trim();
@@ -117,7 +128,7 @@ const ListTicketsServiceKanban = async ({
 
     whereCondition = {
       ...whereCondition,
-      [Op.or]: [
+      [Op.and]: [
         {
           "$contact.name$": where(
             fn("LOWER", col("contact.name")),
@@ -137,16 +148,17 @@ const ListTicketsServiceKanban = async ({
     };
   }
 
-  if (dateStart && dateEnd) {
+  if (date) {
     whereCondition = {
       createdAt: {
-        [Op.between]: [+startOfDay(parseISO(dateStart)), +endOfDay(parseISO(dateEnd))]
+        [Op.between]: [+startOfDay(parseISO(date)), +endOfDay(parseISO(date))]
       }
     };
   }
 
   if (updatedAt) {
     whereCondition = {
+      ...whereCondition,
       updatedAt: {
         [Op.between]: [
           +startOfDay(parseISO(updatedAt)),
@@ -156,8 +168,20 @@ const ListTicketsServiceKanban = async ({
     };
   }
 
+  if (dateFrom && dateUntil) {
+    whereCondition = {
+      ...whereCondition,
+      updatedAt: {
+        [Op.between]: [
+          +startOfDay(parseISO(dateFrom)),
+          +endOfDay(parseISO(dateUntil))
+        ]
+      }
+    };
+  }
+
   if (withUnreadMessages === "true") {
-    const user = await ShowUserService(userId, companyId);
+    const user = await ShowUserService(userId);
     const userQueueIds = user.queues.map(queue => queue.id);
 
     whereCondition = {
@@ -194,6 +218,7 @@ const ListTicketsServiceKanban = async ({
       const ticketUsers = await Ticket.findAll({
         where: { userId: user }
       });
+
       if (ticketUsers) {
         ticketsUserFilter.push(ticketUsers.map(t => t.id));
       }
@@ -209,13 +234,15 @@ const ListTicketsServiceKanban = async ({
     };
   }
 
-  const limit = 400;
+  const limit = 400000;
   const offset = limit * (+pageNumber - 1);
 
   whereCondition = {
     ...whereCondition,
     companyId
   };
+
+  console.log({ where: whereCondition, include: includeCondition });
 
   const { count, rows: tickets } = await Ticket.findAndCountAll({
     where: whereCondition,
@@ -226,6 +253,7 @@ const ListTicketsServiceKanban = async ({
     order: [["updatedAt", "DESC"]],
     subQuery: false
   });
+
   const hasMore = count > offset + tickets.length;
 
   return {

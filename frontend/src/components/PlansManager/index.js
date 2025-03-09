@@ -23,7 +23,6 @@ import { Edit as EditIcon } from "@material-ui/icons";
 
 import { toast } from "react-toastify";
 import usePlans from "../../hooks/usePlans";
-import { i18n } from "../../translate/i18n";
 
 
 const useStyles = makeStyles(theme => ({
@@ -72,7 +71,7 @@ export function PlanManagerForm(props) {
         users: 0,
         connections: 0,
         queues: 0,
-        amount: 0,
+        value: 0,
         useWhatsapp: true,
         useFacebook: true,
         useInstagram: true,
@@ -81,9 +80,7 @@ export function PlanManagerForm(props) {
         useInternalChat: true,
         useExternalApi: true,
         useKanban: true,
-        useOpenAi: true,
-        useIntegrations: true,
-        isPublic: true
+        useInternal: true
     });
 
     useEffect(() => {
@@ -108,39 +105,25 @@ export function PlanManagerForm(props) {
         >
             {(values) => (
                 <Form className={classes.fullWidth}>
-                    <Grid spacing={1} justifyContent="flex-start" container>
+                    <Grid spacing={2} justifyContent="flex-end" container>
+                        
                         {/* NOME */}
-                        <Grid xs={12} sm={6} md={2} xl={2} item>
+                        <Grid xs={12} sm={6} md={2} item>
                             <Field
                                 as={TextField}
-                                label={i18n.t("plans.form.name")}
+                                label="Nome"
                                 name="name"
                                 variant="outlined"
                                 className={classes.fullWidth}
                                 margin="dense"
                             />
                         </Grid>
-                        <Grid xs={12} sm={6} md={2} xl={2} item>
-                            <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="status-selection">{i18n.t("plans.form.public")}</InputLabel>
-                                <Field
-                                    as={Select}
-                                    id="status-selection"
-                                    label={i18n.t("plans.form.public")}
-                                    labelId="status-selection-label"
-                                    name="isPublic"
-                                    margin="dense"
-                                >
-                                    <MenuItem value={true}>Sim</MenuItem>
-                                    <MenuItem value={false}>Não</MenuItem>
-                                </Field>
-                            </FormControl>
-                        </Grid>
+
                         {/* USUARIOS */}
                         <Grid xs={12} sm={6} md={1} item>
                             <Field
                                 as={TextField}
-                                label={i18n.t("plans.form.users")}
+                                label="Usuários"
                                 name="users"
                                 variant="outlined"
                                 className={classes.fullWidth}
@@ -153,7 +136,7 @@ export function PlanManagerForm(props) {
                         <Grid xs={12} sm={6} md={1} item>
                             <Field
                                 as={TextField}
-                                label={i18n.t("plans.form.connections")}
+                                label="Conexões"
                                 name="connections"
                                 variant="outlined"
                                 className={classes.fullWidth}
@@ -161,7 +144,7 @@ export function PlanManagerForm(props) {
                                 type="number"
                             />
                         </Grid>
-
+                        
                         {/* FILAS */}
                         <Grid xs={12} sm={6} md={1} item>
                             <Field
@@ -174,88 +157,40 @@ export function PlanManagerForm(props) {
                                 type="number"
                             />
                         </Grid>
-
+                        
                         {/* VALOR */}
                         <Grid xs={12} sm={6} md={1} item>
                             <Field
                                 as={TextField}
                                 label="Valor"
-                                name="amount"
+                                name="value"
                                 variant="outlined"
                                 className={classes.fullWidth}
                                 margin="dense"
                                 type="text"
                             />
                         </Grid>
+                        
 
-                        {/* WHATSAPP */}
-                        <Grid xs={12} sm={6} md={2} item>
-                            <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useWhatsapp-selection">Whatsapp</InputLabel>
-                                <Field
-                                    as={Select}
-                                    id="useWhatsapp-selection"
-                                    label="Whatsapp"
-                                    labelId="useWhatsapp-selection-label"
-                                    name="useWhatsapp"
-                                    margin="dense"
-                                >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
-                                </Field>
-                            </FormControl>
-                        </Grid>
 
-                        {/* FACEBOOK */}
-                        <Grid xs={12} sm={6} md={2} item>
-                            <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useFacebook-selection">Facebook</InputLabel>
-                                <Field
-                                    as={Select}
-                                    id="useFacebook-selection"
-                                    label="Facebook"
-                                    labelId="useFacebook-selection-label"
-                                    name="useFacebook"
-                                    margin="dense"
-                                >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
-                                </Field>
-                            </FormControl>
-                        </Grid>
 
-                        {/* INSTAGRAM */}
-                        <Grid xs={12} sm={6} md={2} item>
-                            <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useInstagram-selection">Instagram</InputLabel>
-                                <Field
-                                    as={Select}
-                                    id="useInstagram-selection"
-                                    label="Instagram"
-                                    labelId="useInstagram-selection-label"
-                                    name="useInstagram"
-                                    margin="dense"
-                                >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
-                                </Field>
-                            </FormControl>
-                        </Grid>
+
+
 
                         {/* CAMPANHAS */}
                         <Grid xs={12} sm={6} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useCampaigns-selection">{i18n.t("plans.form.campaigns")}</InputLabel>
+                                <InputLabel htmlFor="useCampaigns-selection">Campanhas</InputLabel>
                                 <Field
                                     as={Select}
                                     id="useCampaigns-selection"
-                                    label={i18n.t("plans.form.campaigns")}
+                                    label="Campanhas"
                                     labelId="useCampaigns-selection-label"
                                     name="useCampaigns"
                                     margin="dense"
                                 >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
+                                    <MenuItem value={true}>Sim</MenuItem>
+                                    <MenuItem value={false}>Não</MenuItem>
                                 </Field>
                             </FormControl>
                         </Grid>
@@ -263,17 +198,17 @@ export function PlanManagerForm(props) {
                         {/* AGENDAMENTOS */}
                         <Grid xs={12} sm={8} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useSchedules-selection">{i18n.t("plans.form.schedules")}</InputLabel>
+                                <InputLabel htmlFor="useSchedules-selection">Agendamentos</InputLabel>
                                 <Field
                                     as={Select}
                                     id="useSchedules-selection"
-                                    label={i18n.t("plans.form.schedules")}
+                                    label="Agendamentos"
                                     labelId="useSchedules-selection-label"
                                     name="useSchedules"
                                     margin="dense"
                                 >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
+                                    <MenuItem value={true}>Sim</MenuItem>
+                                    <MenuItem value={false}>Não</MenuItem>
                                 </Field>
                             </FormControl>
                         </Grid>
@@ -290,14 +225,14 @@ export function PlanManagerForm(props) {
                                     name="useInternalChat"
                                     margin="dense"
                                 >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
+                                    <MenuItem value={true}>Sim</MenuItem>
+                                    <MenuItem value={false}>Não</MenuItem>
                                 </Field>
                             </FormControl>
                         </Grid>
 
                         {/* API Externa */}
-                        <Grid xs={12} sm={8} md={4} item>
+                        <Grid xs={12} sm={8} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
                                 <InputLabel htmlFor="useExternalApi-selection">API Externa</InputLabel>
                                 <Field
@@ -308,14 +243,14 @@ export function PlanManagerForm(props) {
                                     name="useExternalApi"
                                     margin="dense"
                                 >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
+                                    <MenuItem value={true}>Sim</MenuItem>
+                                    <MenuItem value={false}>Não</MenuItem>
                                 </Field>
                             </FormControl>
                         </Grid>
 
                         {/* KANBAN */}
-                        <Grid xs={12} sm={8} md={2} item>
+                        <Grid xs={12} sm={6} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
                                 <InputLabel htmlFor="useKanban-selection">Kanban</InputLabel>
                                 <Field
@@ -326,65 +261,45 @@ export function PlanManagerForm(props) {
                                     name="useKanban"
                                     margin="dense"
                                 >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
+                                    <MenuItem value={true}>Sim</MenuItem>
+                                    <MenuItem value={false}>Não</MenuItem>
                                 </Field>
                             </FormControl>
                         </Grid>
 
-                        {/* OPENAI */}
-                        <Grid xs={12} sm={8} md={2} item>
+						{/* INTERNO */}
+                        <Grid xs={12} sm={6} md={2} item>
                             <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useOpenAi-selection">Talk.Ai</InputLabel>
+                                <InputLabel htmlFor="useInternal-selection">Uso Interno</InputLabel>
                                 <Field
                                     as={Select}
-                                    id="useOpenAi-selection"
-                                    label="Talk.Ai"
-                                    labelId="useOpenAi-selection-label"
-                                    name="useOpenAi"
+                                    id="useInternal-selection"
+                                    label="Uso Interno"
+                                    labelId="useInternal-selection-label"
+                                    name="useInternal"
                                     margin="dense"
                                 >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
+                                    <MenuItem value={false}>Sim</MenuItem>
+                                    <MenuItem value={true}>Não</MenuItem>
                                 </Field>
                             </FormControl>
                         </Grid>
 
-                        {/* INTEGRACOES */}
-                        <Grid xs={12} sm={8} md={2} item>
-                            <FormControl margin="dense" variant="outlined" fullWidth>
-                                <InputLabel htmlFor="useIntegrations-selection">Integrações</InputLabel>
-                                <Field
-                                    as={Select}
-                                    id="useIntegrations-selection"
-                                    label="Integrações"
-                                    labelId="useIntegrations-selection-label"
-                                    name="useIntegrations"
-                                    margin="dense"
-                                >
-                                    <MenuItem value={true}>{i18n.t("plans.form.enabled")}</MenuItem>
-                                    <MenuItem value={false}>{i18n.t("plans.form.disabled")}</MenuItem>
-                                </Field>
-                            </FormControl>
-                        </Grid>
-                    </Grid>
-                    <Grid spacing={2} justifyContent="flex-end" container>
-
-                        <Grid sm={3} md={2} item>
+                        <Grid sm={3} md={1} item>
                             <ButtonWithSpinner className={classes.fullWidth} loading={loading} onClick={() => onCancel()} variant="contained">
-                                {i18n.t("plans.form.clear")}
+                                Limpar
                             </ButtonWithSpinner>
                         </Grid>
                         {record.id !== undefined ? (
-                            <Grid sm={3} md={2} item>
+                            <Grid sm={3} md={1} item>
                                 <ButtonWithSpinner className={classes.fullWidth} loading={loading} onClick={() => onDelete(record)} variant="contained" color="secondary">
-                                    {i18n.t("plans.form.delete")}
+                                    Excluir
                                 </ButtonWithSpinner>
                             </Grid>
                         ) : null}
-                        <Grid sm={3} md={2} item>
+                        <Grid sm={3} md={1} item>
                             <ButtonWithSpinner className={classes.fullWidth} loading={loading} type="submit" variant="contained" color="primary">
-                                {i18n.t("plans.form.save")}
+                                Salvar
                             </ButtonWithSpinner>
                         </Grid>
                     </Grid>
@@ -399,43 +314,39 @@ export function PlansManagerGrid(props) {
     const classes = useStyles()
 
     const renderWhatsapp = (row) => {
-        return row.useWhatsapp === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useWhatsapp === false ? "Não" : "Sim";
     };
 
     const renderFacebook = (row) => {
-        return row.useFacebook === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useFacebook === false ? "Não" : "Sim";
     };
 
     const renderInstagram = (row) => {
-        return row.useInstagram === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useInstagram === false ? "Não" : "Sim";
     };
 
     const renderCampaigns = (row) => {
-        return row.useCampaigns === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useCampaigns === false ? "Não" : "Sim";
     };
 
     const renderSchedules = (row) => {
-        return row.useSchedules === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useSchedules === false ? "Não" : "Sim";
     };
 
     const renderInternalChat = (row) => {
-        return row.useInternalChat === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useInternalChat === false ? "Não" : "Sim";
     };
 
     const renderExternalApi = (row) => {
-        return row.useExternalApi === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useExternalApi === false ? "Não" : "Sim";
     };
 
     const renderKanban = (row) => {
-        return row.useKanban === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+        return row.useKanban === false ? "Não" : "Sim";
     };
 
-    const renderOpenAi = (row) => {
-        return row.useOpenAi === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
-    };
-
-    const renderIntegrations = (row) => {
-        return row.useIntegrations === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
+    const renderInternal = (row) => {
+        return row.useInternal === false ? "Sim" : "Não";
     };
 
     return (
@@ -449,22 +360,17 @@ export function PlansManagerGrid(props) {
                 <TableHead>
                     <TableRow>
                         <TableCell align="center" style={{ width: '1%' }}>#</TableCell>
-                        <TableCell align="left">{i18n.t("plans.form.name")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.users")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.public")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.connections")}</TableCell>
+                        <TableCell align="left">Nome</TableCell>
+                        <TableCell align="center">Usuários</TableCell>
+                        <TableCell align="center">Conexões</TableCell>
                         <TableCell align="center">Filas</TableCell>
                         <TableCell align="center">Valor</TableCell>
-                        <TableCell align="center">Whatsapp</TableCell>
-                        <TableCell align="center">Facebook</TableCell>
-                        <TableCell align="center">Instagram</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.campaigns")}</TableCell>
-                        <TableCell align="center">{i18n.t("plans.form.schedules")}</TableCell>
+                        <TableCell align="center">Campanhas</TableCell>
+                        <TableCell align="center">Agendamentos</TableCell>
                         <TableCell align="center">Chat Interno</TableCell>
                         <TableCell align="center">API Externa</TableCell>
-                        <TableCell align="center">Kanban</TableCell>
-                        <TableCell align="center">Talk.Ai</TableCell>
-                        <TableCell align="center">Integrações</TableCell>
+						<TableCell align="center">Kanban</TableCell>
+						<TableCell align="center">Interno</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -477,20 +383,16 @@ export function PlansManagerGrid(props) {
                             </TableCell>
                             <TableCell align="left">{row.name || '-'}</TableCell>
                             <TableCell align="center">{row.users || '-'}</TableCell>
-                            <TableCell align="center">{row.isPublic ? "Sim": "Não" || '-'}</TableCell>
                             <TableCell align="center">{row.connections || '-'}</TableCell>
                             <TableCell align="center">{row.queues || '-'}</TableCell>
-                            <TableCell align="center">{i18n.t("plans.form.money")} {row.amount ? row.amount.toLocaleString('pt-br', { minimumFractionDigits: 2 }) : '00.00'}</TableCell>
-                            <TableCell align="center">{renderWhatsapp(row)}</TableCell>
-                            <TableCell align="center">{renderFacebook(row)}</TableCell>
-                            <TableCell align="center">{renderInstagram(row)}</TableCell>
+                            <TableCell align="center">R$ {row.value ? row.value.toLocaleString('pt-br', {minimumFractionDigits: 2, useGrouping: true, maximumFractionDigits: 2, minimumIntegerDigits: 1}).replace(',', '.') : '00.00'}
+</TableCell>
                             <TableCell align="center">{renderCampaigns(row)}</TableCell>
                             <TableCell align="center">{renderSchedules(row)}</TableCell>
                             <TableCell align="center">{renderInternalChat(row)}</TableCell>
                             <TableCell align="center">{renderExternalApi(row)}</TableCell>
-                            <TableCell align="center">{renderKanban(row)}</TableCell>
-                            <TableCell align="center">{renderOpenAi(row)}</TableCell>
-                            <TableCell align="center">{renderIntegrations(row)}</TableCell>
+							<TableCell align="center">{renderKanban(row)}</TableCell>
+                            <TableCell align="center">{renderInternal(row)}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
@@ -511,7 +413,7 @@ export default function PlansManager() {
         users: 0,
         connections: 0,
         queues: 0,
-        amount: 0,
+        value: 0,
         useWhatsapp: true,
         useFacebook: true,
         useInstagram: true,
@@ -519,10 +421,8 @@ export default function PlansManager() {
         useSchedules: true,
         useInternalChat: true,
         useExternalApi: true,
-        useKanban: true,
-        useOpenAi: true,
-        useIntegrations: true,
-        isPublic: true
+    	useKanban: true,
+    	useInternal: true
     })
 
     useEffect(() => {
@@ -531,7 +431,7 @@ export default function PlansManager() {
         }
         fetchData()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [record])
+    }, [])
 
     const loadPlans = async () => {
         setLoading(true)
@@ -545,8 +445,10 @@ export default function PlansManager() {
     }
 
     const handleSubmit = async (data) => {
-        setLoading(true)
-        console.log(data)
+        setLoading(true);
+    
+    	// console.log(data);
+    
         try {
             if (data.id !== undefined) {
                 await update(data)
@@ -581,12 +483,11 @@ export default function PlansManager() {
 
     const handleCancel = () => {
         setRecord({
-            id: undefined,
             name: '',
             users: 0,
             connections: 0,
             queues: 0,
-            amount: 0,
+            value: 0,
             useWhatsapp: true,
             useFacebook: true,
             useInstagram: true,
@@ -594,10 +495,8 @@ export default function PlansManager() {
             useSchedules: true,
             useInternalChat: true,
             useExternalApi: true,
-            useKanban: true,
-            useOpenAi: true,
-            useIntegrations: true,
-            isPublic: true
+        	useKanban: true,
+        	useInternal: true
         })
     }
 
@@ -611,8 +510,7 @@ export default function PlansManager() {
         let useInternalChat = data.useInternalChat === false ? false : true
         let useExternalApi = data.useExternalApi === false ? false : true
         let useKanban = data.useKanban === false ? false : true
-        let useOpenAi = data.useOpenAi === false ? false : true
-        let useIntegrations = data.useIntegrations === false ? false : true
+        let useInternal= data.useInternal === true ? true : false
 
         setRecord({
             id: data.id,
@@ -620,7 +518,7 @@ export default function PlansManager() {
             users: data.users || 0,
             connections: data.connections || 0,
             queues: data.queues || 0,
-            amount: data.amount?.toLocaleString('pt-br', { minimumFractionDigits: 2 }) || 0,
+            value: data.value ? data.value.toLocaleString('pt-br', { minimumFractionDigits: 2 }).replace(',', '.') : '0',
             useWhatsapp,
             useFacebook,
             useInstagram,
@@ -629,9 +527,7 @@ export default function PlansManager() {
             useInternalChat,
             useExternalApi,
             useKanban,
-            useOpenAi,
-            useIntegrations,
-            isPublic: data.isPublic
+        	useInternal
         })
     }
 

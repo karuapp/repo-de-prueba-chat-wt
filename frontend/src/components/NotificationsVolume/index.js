@@ -1,11 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
+
 import Popover from "@material-ui/core/Popover";
 import IconButton from "@material-ui/core/IconButton";
 import List from "@material-ui/core/List";
 import { makeStyles } from "@material-ui/core/styles";
 import VolumeUpIcon from "@material-ui/icons/VolumeUp";
 import VolumeDownIcon from "@material-ui/icons/VolumeDown";
-import VolumeOffIcon from "@material-ui/icons/VolumeOff";
+
 import { Grid, Slider } from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
@@ -38,14 +39,6 @@ const NotificationsVolume = ({ volume, setVolume }) => {
 
     const anchorEl = useRef();
     const [isOpen, setIsOpen] = useState(false);
-    const [volumeState, setVolumeState] = useState(1);
-
-    useEffect(() => {
-        const storedVolume = localStorage.getItem("volume");
-        if (storedVolume !== null) {
-            setVolumeState(parseFloat(storedVolume)); // Converte o valor para número
-        }
-    }, []);
 
     const handleClick = () => {
         setIsOpen((prevState) => !prevState);
@@ -56,19 +49,9 @@ const NotificationsVolume = ({ volume, setVolume }) => {
     };
 
     const handleVolumeChange = (value) => {
-        setVolumeState(value);
         setVolume(value);
         localStorage.setItem("volume", value);
     };
-
-    let volumeIcon;
-    if (volumeState === 0) {
-        volumeIcon = <VolumeOffIcon color="inherit" />;
-    } else if (volumeState === 1) {
-        volumeIcon = <VolumeUpIcon color="inherit" />;
-    } else if (volumeState > 0 && volumeState < 1) {
-        volumeIcon = <VolumeDownIcon color="inherit" />;
-    }
 
     return (
         <>
@@ -77,8 +60,10 @@ const NotificationsVolume = ({ volume, setVolume }) => {
                 onClick={handleClick}
                 ref={anchorEl}
                 aria-label="Open Notifications"
+                // color="inherit"
+                // color="secondary"
             >
-                {volumeIcon}
+                <VolumeUpIcon color="inherit" />
             </IconButton>
             <Popover
                 disableScrollLock
@@ -102,12 +87,14 @@ const NotificationsVolume = ({ volume, setVolume }) => {
                         </Grid>
                         <Grid item xs>
                             <Slider
-                                value={volumeState}
+                                value={volume}
                                 aria-labelledby="continuous-slider"
                                 step={0.1}
                                 min={0}
                                 max={1}
-                                onChange={(e, value) => handleVolumeChange(value)}
+                                onChange={(e, value) =>
+                                    handleVolumeChange(value)
+                                }
                             />
                         </Grid>
                         <Grid item>

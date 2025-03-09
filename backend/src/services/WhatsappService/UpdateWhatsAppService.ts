@@ -1,5 +1,6 @@
 import * as Yup from "yup";
 import { Op } from "sequelize";
+import { logger } from "../../utils/logger";
 
 import AppError from "../../errors/AppError";
 import Whatsapp from "../../models/Whatsapp";
@@ -14,37 +15,15 @@ interface WhatsappData {
   greetingMessage?: string;
   complationMessage?: string;
   outOfHoursMessage?: string;
+  ratingMessage?: string;
+  closeMessage?: string;
   queueIds?: number[];
   token?: string;
-  maxUseBotQueues?: number;
-  timeUseBotQueues?: string;
-  expiresTicket?: string;
-  allowGroup?: boolean;
-  sendIdQueue?: number;
-  timeSendQueue?: number;
-  timeInactiveMessage?: string;
-  inactiveMessage?: string;
-  ratingMessage?: string;
-  maxUseBotQueuesNPS?: number;
-  expiresTicketNPS?: number;
-  whenExpiresTicket?: string;
-  expiresInactiveMessage?: string;
-  groupAsTicket?: string;
-  importOldMessages?: string;
-  importRecentMessages?: string;
-  importOldMessagesGroups?: boolean;
-  closedTicketsPostImported?: boolean;
-  timeCreateNewTicket?: number;
-  integrationId?: number;
-  schedules?: any[];
-  promptId?: number;
-  requestQR?: boolean;
-  collectiveVacationMessage?: string;
-  collectiveVacationStart?: string;
-  collectiveVacationEnd?: string;
-  queueIdImportMessages?: number;
-  flowIdNotPhrase?: number;
-  flowIdWelcome?: number;
+  webhook?: string;
+  ignoreNumbers?: string;
+  selectedMoveQueueId?: number;
+  selectedInterval?: number;
+  inatividade?: number;
 }
 
 interface Request {
@@ -77,37 +56,15 @@ const UpdateWhatsAppService = async ({
     greetingMessage,
     complationMessage,
     outOfHoursMessage,
+    ratingMessage,
+    closeMessage,
     queueIds = [],
     token,
-    maxUseBotQueues = 0,
-    timeUseBotQueues = 0,
-    expiresTicket = 0,
-    allowGroup,
-    timeSendQueue = 0,
-    sendIdQueue = null,
-    timeInactiveMessage = 0,
-    inactiveMessage,
-    ratingMessage,
-    maxUseBotQueuesNPS,
-    expiresTicketNPS = 0,
-    whenExpiresTicket,
-    expiresInactiveMessage,
-    groupAsTicket,
-    importOldMessages,
-    importRecentMessages,
-    closedTicketsPostImported,
-    importOldMessagesGroups,
-    timeCreateNewTicket = null,
-    integrationId,
-    schedules,
-    promptId,
-    requestQR = false,
-    collectiveVacationEnd,
-    collectiveVacationMessage,
-    collectiveVacationStart,
-    queueIdImportMessages,
-    flowIdNotPhrase,
-    flowIdWelcome
+    webhook,
+    ignoreNumbers,
+    selectedMoveQueueId,
+    selectedInterval,
+    inatividade
   } = whatsappData;
 
   try {
@@ -134,9 +91,8 @@ const UpdateWhatsAppService = async ({
       await oldDefaultWhatsapp.update({ isDefault: false });
     }
   }
-  // console.log("GETTING WHATSAPP SHOW WHATSAPP 1", whatsappId, companyId)
-  const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
 
+  const whatsapp = await ShowWhatsAppService(whatsappId, companyId);
 
   await whatsapp.update({
     name,
@@ -145,42 +101,24 @@ const UpdateWhatsAppService = async ({
     greetingMessage,
     complationMessage,
     outOfHoursMessage,
+    ratingMessage,
+    closeMessage,
     isDefault,
     companyId,
     token,
-    maxUseBotQueues: maxUseBotQueues || 0,
-    timeUseBotQueues: timeUseBotQueues || 0,
-    expiresTicket: expiresTicket || 0,
-    allowGroup,
-    timeSendQueue,
-    sendIdQueue,
-    timeInactiveMessage,
-    inactiveMessage,
-    ratingMessage,
-    maxUseBotQueuesNPS,
-    expiresTicketNPS,
-    whenExpiresTicket,
-    expiresInactiveMessage,
-    groupAsTicket,
-    importOldMessages,
-    importRecentMessages,
-    closedTicketsPostImported,
-    importOldMessagesGroups,
-    timeCreateNewTicket,
-    integrationId,
-    schedules,
-    promptId,
-    collectiveVacationEnd,
-    collectiveVacationMessage,
-    collectiveVacationStart,
-    queueIdImportMessages,
-    flowIdNotPhrase,
-    flowIdWelcome
+    webhook,
+    ignoreNumbers,
+    selectedMoveQueueId,
+    selectedInterval,
+    inatividade
   });
 
-  if (!requestQR) {
-    await AssociateWhatsappQueue(whatsapp, queueIds);
-  }
+  //logger.info("Update Whatsapp");
+  //logger.info(token);
+  //logger.info(webhook);
+
+
+  await AssociateWhatsappQueue(whatsapp, queueIds);
 
   return { whatsapp, oldDefaultWhatsapp };
 };
